@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 
-// --- INITIAL SEED DATA FOR DEMO ---
 const INITIAL_PARTNERS = [
   { id: 'LP-01', name: 'Alpha Endowment Fund', commitment: 50000000, unfunded: 40000000, pct: 0.50 },
   { id: 'LP-02', name: 'Beacon Pension Plan', commitment: 30000000, unfunded: 24000000, pct: 0.30 },
@@ -28,7 +27,6 @@ export default function Home() {
   const [reports, setReports] = useState<any[]>([]);
   const [activeExtraction, setActiveExtraction] = useState<any>(null);
 
-  // Initialize data on load
   useEffect(() => {
     const savedPartners = localStorage.getItem('inv_partners');
     const savedLedger = localStorage.getItem('inv_ledger');
@@ -41,7 +39,6 @@ export default function Home() {
     ]);
   }, []);
 
-  // --- AI INGESTION ENGINE ---
   async function handleAiParse() {
     if (!inputText.trim()) return alert('Please paste some text documentation first.');
     setLoading(true);
@@ -72,7 +69,6 @@ export default function Home() {
     }
   }
 
-  // --- POST TRANSACTION TO LEDGERS ---
   function postToLedger() {
     if (!activeExtraction) return;
 
@@ -123,7 +119,6 @@ export default function Home() {
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '25px', maxWidth: '1300px', margin: '0 auto', color: '#222', background: '#fcfcfc' }}>
       
-      {/* HEADER SECTION */}
       <header style={{ borderBottom: '2px solid #002d62', paddingBottom: '15px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.8rem', color: '#002d62' }}>Investments Explorer</h1>
@@ -134,7 +129,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* CORE NAVIGATION MENU TABS */}
       <nav style={{ display: 'flex', gap: '10px', marginBottom: '25px', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
         <button onClick={() => setActiveTab('ingestion')} style={{ padding: '10px 20px', cursor: 'pointer', border: 'none', borderRadius: '4px', background: activeTab === 'ingestion' ? '#002d62' : '#eee', color: activeTab === 'ingestion' ? 'white' : '#333', fontWeight: 'bold' }}>
           Notice Ingestion & Exception Parsing
@@ -150,7 +144,6 @@ export default function Home() {
         </button>
       </nav>
 
-      {/* TAB 1: INGESTION WORKSPACE */}
       {activeTab === 'ingestion' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
           <div>
@@ -226,7 +219,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* TAB 2: GENEVA ASSET GENERAL LEDGER */}
       {activeTab === 'ledger' && (
         <div>
           <h3 style={{ marginTop: 0, color: '#002d62' }}>Geneva Transaction General Ledger (Double-Entry Audit)</h3>
@@ -253,3 +245,82 @@ export default function Home() {
                       {entry.lines.map((l: any, idx: number) => (
                         <tr key={idx} style={{ borderBottom: '1px dotted #eee' }}>
                           <td style={{ padding: '4px', fontWeight: 'bold' }}>{l.accountCode}</td>
+                          <td style={{ padding: '4px' }}>{INITIAL_COA[l.accountCode as keyof typeof INITIAL_COA] || l.accountName}</td>
+                          <td style={{ padding: '4px', textAlign: 'right' }}>{l.debitInCents > 0 ? l.debitInCents.toLocaleString() : '-'}</td>
+                          <td style={{ padding: '4px', textAlign: 'right' }}>{l.creditInCents > 0 ? l.creditInCents.toLocaleString() : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'investran' && (
+        <div>
+          <h3 style={{ marginTop: 0, color: '#002d62' }}>Investran Partnership Capital Account Management Engine</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', border: '1px solid #ddd', fontSize: '0.9rem' }}>
+            <thead>
+              <tr style={{ background: '#002d62', color: 'white', textAlign: 'left' }}>
+                <th style={{ padding: '12px 10px' }}>LP Identifier</th>
+                <th style={{ padding: '12px 10px' }}>Investor Entity Name</th>
+                <th style={{ padding: '12px 10px', textAlign: 'right' }}>Fund Pro-Rata Share</th>
+                <th style={{ padding: '12px 10px', textAlign: 'right' }}>Total Initial Commitment</th>
+                <th style={{ padding: '12px 10px', textAlign: 'right' }}>Remaining Unfunded Capital Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {partners.map((p) => (
+                <tr key={p.id} style={{ borderBottom: '1px solid #ddd' }}>
+                  <td style={{ padding: '10px', fontWeight: 'bold', color: '#555' }}>{p.id}</td>
+                  <td style={{ padding: '10px' }}>{p.name}</td>
+                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#0070f3' }}>{(p.pct * 100).toFixed(2)}%</td>
+                  <td style={{ padding: '10px', textAlign: 'right' }}>{(p.commitment / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+                  <td style={{ padding: '10px', textAlign: 'right', color: p.unfunded < p.commitment ? '#b22222' : '#222' }}>
+                    {(p.unfunded / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === 'reports' && (
+        <div>
+          <h3 style={{ marginTop: 0, color: '#002d62' }}>Institutional Financial Report Vault & Download Depository</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', border: '1px solid #ddd', fontSize: '0.9rem' }}>
+            <thead>
+              <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd', textAlign: 'left' }}>
+                <th style={{ padding: '10px' }}>Report Identifier</th>
+                <th style={{ padding: '10px' }}>Document Manifest Name</th>
+                <th style={{ padding: '10px' }}>Accounting Category</th>
+                <th style={{ padding: '10px' }}>Target Date</th>
+                <th style={{ padding: '10px', textAlign: 'center' }}>Available Downloads</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map((rep) => (
+                <tr key={rep.id} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: '10px', fontWeight: 'bold', color: '#666' }}>{rep.id}</td>
+                  <td style={{ padding: '10px' }}><code>{rep.name}</code></td>
+                  <td style={{ padding: '10px' }}>{rep.type}</td>
+                  <td style={{ padding: '10px' }}>{rep.date || '2026-06-01'}</td>
+                  <td style={{ padding: '10px', textAlign: 'center' }}>
+                    <button onClick={() => alert(`Initiating mock download pipeline for: [${rep.format}]`)} style={{ background: '#002d62', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      ⬇️ Download .{rep.format.toLowerCase()}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+    </div>
+  );
+}

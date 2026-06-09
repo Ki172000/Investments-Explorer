@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Investments Explorer",
+  title: "Investments Explorer Terminal",
   description: "AI Ledger Architecture Core",
 };
 
