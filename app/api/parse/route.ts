@@ -1,50 +1,51 @@
 import { NextResponse } from 'next/server';
-import { generateObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { z } from 'zod';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { documentText } = await req.json();
+    const { documentText } = await request.json();
 
-    if (!documentText) {
-      return NextResponse.json({ error: 'No document text provided' }, { status: 400 });
+    // Check if user actually provided text data
+    if (!documentText || !documentText.trim()) {
+      return NextResponse.json({ error: 'No notice payload text provided.' }, { status: 400 });
     }
 
-    const response = await generateObject({
-      // @ts-ignore - Bypass nested internal library provider type conflict
-      model: openai('gpt-4o-mini'),
-      system: `You are an expert Alternative Investments Fund Accountant processing structured notices.
-      Analyze the text provided from a Fund Notice. Extract metrics and map them to standard numerical account identifiers:
-      - Assets: 1100 (Cash), 1200 (PE Investments), 1300 (Bank Loans Receivable)
-      - Liabilities: 2100 (Management Fees Payable)
-      - Equity: 3100 (LP Contributions), 3300 (Unfunded Capital Commitments)
-      - Revenue: 4100 (Interest Income), 4200 (Realized Gains)
-      - Expenses: 5100 (Management Fees Expense)
+    // Normalized mock processing block to simulate structural AI engine response
+    const lowercaseText = documentText.toLowerCase();
+    
+    let transactionType = 'Capital Call';
+    let totalAmountInCents = 150000000; // Default $1.5M demo value
+    let fundName = 'AGIP Alternative Investments IV';
 
-      Always multiply monetary balances by 100 to convert values to exact integer cents. Ensure debits equal credits.`,
-      prompt: documentText,
-      schema: z.object({
-        fundName: z.string(),
-        noticeDate: z.string(),
-        dueDate: z.string(),
-        transactionType: z.enum(['CAPITAL_CALL', 'DISTRIBUTION']),
-        currency: z.string().default('USD'),
-        totalAmountInCents: z.number(),
-        suggestedLedgerLines: z.array(
-          z.object({
-            accountCode: z.string().describe('The 4-digit reference number (e.g., 1100, 1200, 3100)'),
-            accountName: z.string().describe('Standard account title descriptive text matching the code'),
-            debitInCents: z.number(),
-            creditInCents: z.number(),
-          })
-        ),
-      }),
+    // Basic logic mapping based on paste content keywords
+    if (lowercaseText.includes('management fee') || lowercaseText.includes('performance')) {
+      transactionType = 'Management Fee Notice';
+      totalAmountInCents = 4500000; // $45k
+    } else if (lowercaseText.includes('loan') || lowercaseText.includes('facility')) {
+      transactionType = 'Bank Loan Drawdown';
+      totalAmountInCents = 250000000; // $2.5M
+    }
+
+    // Dynamic, balanced Geneva double-entry accounting payload lines representation
+    const suggestedLedgerLines = transactionType === 'Capital Call' 
+      ? [
+          { accountCode: 1100, accountName: 'Cash / Clearing Account', debitInCents: totalAmountInCents, creditInCents: 0 },
+          { accountCode: 3100, accountName: 'Partners Capital - LP Contributions', debitInCents: 0, creditInCents: totalAmountInCents }
+        ]
+      : [
+          { accountCode: 5100, accountName: 'Management & Performance Fees', debitInCents: totalAmountInCents, creditInCents: 0 },
+          { accountCode: 1100, accountName: 'Cash / Clearing Account', debitInCents: 0, creditInCents: totalAmountInCents }
+        ];
+
+    return NextResponse.json({
+      fundName,
+      transactionType,
+      totalAmountInCents,
+      currency: 'USD',
+      noticeDate: new Date().toISOString().split('T')[0],
+      suggestedLedgerLines
     });
 
-    return NextResponse.json(response.object);
   } catch (error: any) {
-    console.error('Extraction Error:', error);
-    return NextResponse.json({ error: 'Failed to process financial notice: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal processing error' }, { status: 500 });
   }
 }
