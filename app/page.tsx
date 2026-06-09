@@ -83,7 +83,7 @@ export default function Home() {
     }
   };
 
-// --- POST TRANSACTION TO LEDGERS ---
+  // --- 2. POST TRANSACTION TO LEDGERS ---
   const postToLedger = () => {
     if (!activeExtraction) return;
 
@@ -162,29 +162,4 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
           <div>
             <h3 style={{ marginTop: 0, color: '#002d62' }}>1. Unstructured Document Ingestion Pipeline</h3>
-            <p style={{ fontSize: '0.88rem', color: '#555' }}>Drop raw copy-pasted text from Capital Calls, Bank Loan notices, or Rollovers into the processor box below:</p>
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Paste raw text here..."
-              style={{ width: '100%', height: '280px', padding: '12px', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace', fontSize: '0.85rem' }}
-            />
-            <button
-              onClick={handleAiParse}
-              disabled={loading}
-              style={{ marginTop: '12px', width: '100%', padding: '12px', background: '#0070f3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem' }}
-            >
-              {loading ? 'AI Engine Mapping and Evaluating Rules...' : 'Execute Structured AI Ledger Extraction'}
-            </button>
-          </div>
-
-          <div>
-            <h3 style={{ marginTop: 0, color: '#002d62' }}>2. Live Double-Entry Matching View</h3>
-            {!activeExtraction ? (
-              <div style={{ border: '2px dashed #ccc', borderRadius: '4px', height: '345px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#777', backgroundColor: '#fafafa' }}>
-                Pipeline resting. Awaiting operational text data...
-              </div>
-            ) : (
-              <div style={{ background: '#fff', padding: '20px', borderRadius: '4px', border: '1px solid #ddd', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <h4 style={{ margin: 0, color: '#0
+            <p style={{ fontSize: '0.88rem', color: '#555' }}>Drop raw copy-pasted text from Capital Calls, Bank Loan notices, or Rollovers into the processor
