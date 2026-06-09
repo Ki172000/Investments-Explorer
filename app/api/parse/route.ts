@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     }
 
     const response = await generateObject({
+      // @ts-ignore - Bypass nested internal library provider type conflict
       model: openai('gpt-4o-mini'),
       system: `You are an expert Alternative Investments Fund Accountant processing structured notices.
       Analyze the text provided from a Fund Notice. Extract metrics and map them to standard numerical account identifiers:
