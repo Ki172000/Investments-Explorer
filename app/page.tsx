@@ -1,39 +1,25 @@
-import React from 'react';
-
-export default function Home() {
-  return (
-    <div style={{ 
-      fontFamily: 'sans-serif', 
-      padding: '40px', 
-      maxWidth: '800px', 
-      margin: '0 auto',
-      color: '#333' 
-    }}>
-      <header style={{ borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
-        <h1 style={{ fontSize: '2.5rem', color: '#111', marginBottom: '8px' }}>
-          Investments Explorer
-        </h1>
-        <p style={{ fontSize: '1.1rem', color: '#666', margin: 0 }}>
-          AI-Powered Financial Reporting for Alternative Investments
-        </p>
-      </header>
-      
-      <main style={{ marginTop: '40px' }}>
-        <section style={{ 
-          background: '#f9f9f9', 
-          padding: '24px', 
-          borderRadius: '8px', 
-          border: '1px solid #eaeaea' 
-        }}>
-          <h2 style={{ marginTop: 0, color: '#222' }}>System Initialization Complete</h2>
-          <p>The application engine is prepared. Next modules to deploy:</p>
-          <ul style={{ lineHeight: '1.6' }}>
-            <li><strong>Intelligent Data Ingestion:</strong> Capital Call / Distribution Notice Parsing</li>
-            <li><strong>Ledger Engine:</strong> Multi-Currency Trial Balances & Partner Allocations</li>
-            <li><strong>Financial Statements:</strong> SOI (Schedule of Investments) & PCAP Generation</li>
-          </ul>
-        </section>
-      </main>
-    </div>
-  );
-}
+// Inside app/page.tsx, locate the table element and replace its headers and body rows with this snippet:
+<table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+  <thead>
+    <tr style={{ borderBottom: '2px solid #ccc', textAlign: 'left' }}>
+      <th style={{ padding: '6px' }}>Code</th>
+      <th style={{ padding: '6px' }}>Account Mapping</th>
+      <th style={{ padding: '6px', textAlign: 'right' }}>Debit (Cents)</th>
+      <th style={{ padding: '6px', textAlign: 'right' }}>Credit (Cents)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {extractedData.suggestedLedgerLines.map((line: any, i: number) => (
+      <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
+        <td style={{ padding: '8px 6px', fontWeight: 'bold', color: '#555' }}>{line.accountCode}</td>
+        <td style={{ padding: '8px 6px' }}>{line.accountName}</td>
+        <td style={{ padding: '8px 6px', textAlign: 'right', color: line.debitInCents > 0 ? '#008000' : '#444' }}>
+          {line.debitInCents.toLocaleString()}
+        </td>
+        <td style={{ padding: '8px 6px', textAlign: 'right', color: line.creditInCents > 0 ? '#b22222' : '#444' }}>
+          {line.creditInCents.toLocaleString()}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
