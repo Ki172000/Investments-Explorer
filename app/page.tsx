@@ -83,7 +83,7 @@ export default function Home() {
     }
   };
 
-  // --- POST TRANSACTION TO LEDGERS ---
+// --- POST TRANSACTION TO LEDGERS ---
   const postToLedger = () => {
     if (!activeExtraction) return;
 
