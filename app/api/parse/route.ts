@@ -5,38 +5,36 @@ export async function POST(request: Request) {
     const { documentText } = await request.json();
 
     if (!documentText || !documentText.trim()) {
-      return NextResponse.json({ error: 'No notice payload text provided.' }, { status: 400 });
+      return NextResponse.json({ error: 'Empty operational log payload.' }, { status: 400 });
     }
 
     const cleanText = documentText.trim();
-    
-    // Segment text based on batch headers
     const blocks = cleanText.split(/transaction architecture batch file|transaction frame|batch file/i);
     const extractedEntries: any[] = [];
 
-    blocks.forEach((block, index) => {
-      if (index === 0 && !block.toLowerCase().includes('target fund entity')) return;
-      
+    blocks.forEach((block) => {
       const lowercaseBlock = block.toLowerCase();
-      if (!lowercaseBlock.trim()) return;
+      if (!lowercaseBlock.trim() || !lowercaseBlock.includes('target fund entity')) return;
 
-      // Identify transaction class
-      let transactionType = 'Capital Call';
+      // Classify transaction type using institutional definitions
+      let transactionType = 'Capital Drawdown Record';
       if (lowercaseBlock.includes('management fee') || lowercaseBlock.includes('advisory fee') || lowercaseBlock.includes('invoice amount')) {
-        transactionType = 'Management Fee Notice';
+        transactionType = 'Management Fees Notice';
       } else if (lowercaseBlock.includes('distribution') || lowercaseBlock.includes('return of capital') || lowercaseBlock.includes('divestment')) {
-        transactionType = 'Fund Distribution';
+        transactionType = 'Fund Distribution Run';
+      } else if (lowercaseBlock.includes('rebalancing') || lowercaseBlock.includes('true-up')) {
+        transactionType = 'Prior-Period Adjustment Rebalancing';
       }
 
-      // Extract Fund Entity Name
-      let fundName = 'Alternative Investments Portfolio IV';
+      // Extract Target Portfolio Legal Entity
+      let fundName = 'AGIP Alternative Investments IV';
       const fundRegex = /(?:fund entity|target fund entity|partnership|fund)\s*:\s*([^\n\r]+)/i;
       const fundMatch = block.match(fundRegex);
       if (fundMatch && fundMatch[1]) {
         fundName = fundMatch[1].trim();
       }
 
-      // Extract Currency Value
+      // Extract Numeric Settlement Amount
       let amountInCents = 0;
       const amountRegex = /(?:\$|php|eur|gbp)\s*([0-9,]+(?:\.[0-9]{2})?)/i;
       const amountMatch = block.match(amountRegex);
@@ -47,41 +45,43 @@ export async function POST(request: Request) {
 
       if (amountInCents === 0) return;
 
-      // Structure double-entry guidelines
+      // Map Ledger Legs
       let lines: any[] = [];
-      if (transactionType === 'Capital Call') {
+      if (transactionType === 'Capital Drawdown Record') {
         lines = [
           { accountCode: '1100', debitInCents: amountInCents, creditInCents: 0 },
           { accountCode: '3100', debitInCents: 0, creditInCents: amountInCents }
         ];
-      } else if (transactionType === 'Management Fee Notice') {
+      } else if (transactionType === 'Management Fees Notice') {
         lines = [
           { accountCode: '5100', debitInCents: amountInCents, creditInCents: 0 },
           { accountCode: '1100', debitInCents: 0, creditInCents: amountInCents }
         ];
-      } else if (transactionType === 'Fund Distribution') {
+      } else if (transactionType === 'Fund Distribution Run') {
+        lines = [
+          { accountCode: '3100', debitInCents: amountInCents, creditInCents: 0 },
+          { accountCode: '1100', debitInCents: 0, creditInCents: amountInCents }
+        ];
+      } else if (transactionType === 'Prior-Period Adjustment Rebalancing') {
         lines = [
           { accountCode: '3100', debitInCents: amountInCents, creditInCents: 0 },
           { accountCode: '1100', debitInCents: 0, creditInCents: amountInCents }
         ];
       }
 
-      // Generate localized ID using the JE-XXXX framework
-      const uniqueSerial = Math.floor(1000 + Math.random() * 9000);
+      const uniqueToken = Math.floor(1000 + Math.random() * 9000);
 
       extractedEntries.push({
-        id: `JE${uniqueSerial}`,
+        id: `JE${uniqueToken}`,
         fundName,
         transactionType,
         totalAmountInCents: amountInCents,
-        currency: 'USD',
         suggestedLedgerLines: lines
       });
     });
 
     return NextResponse.json({ entries: extractedEntries });
-
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal batch processing error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Processing engine failure' }, { status: 500 });
   }
 }

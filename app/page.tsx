@@ -18,9 +18,9 @@ const INITIAL_PARTNERS = [
 ];
 
 const EXTERNAL_FEED = [
-  { id: 'EXT01', type: 'Cash', accountCode: '1100', description: 'Institutional Operating Wire Feed', externalAmount: 150000000 },
-  { id: 'EXT02', type: 'Position', accountCode: '1200', description: 'Custodian Vault Position Statement', externalAmount: 500000000 },
-  { id: 'EXT03', type: 'Commitment', accountCode: '3100', description: 'Master Registry Signoff Record', externalAmount: 50000000 }
+  { id: 'EXT01', type: 'Cash Stream', accountCode: '1100', description: 'Institutional Operating Wire Feed', externalAmount: 150000000 },
+  { id: 'EXT02', type: 'Asset Value Statement', accountCode: '1200', description: 'Custodian Vault Position Statement', externalAmount: 500000000 },
+  { id: 'EXT03', type: 'Registry Record', accountCode: '3100', description: 'Master Registry Signoff Record', externalAmount: 50000000 }
 ];
 
 export default function Home() {
@@ -29,7 +29,7 @@ export default function Home() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Custom Dynamic State Structures
+  // Data State Arrays
   const [coa, setCoa] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
@@ -37,12 +37,12 @@ export default function Home() {
   const [extractedBatch, setExtractedBatch] = useState<any[]>([]);
   const [matchedIds, setMatchedIds] = useState<string[]>([]);
 
-  // COA Input Forms
+  // Chart of Accounts Forms
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
   const [newCat, setNewCat] = useState('Asset');
 
-  // Registry Input Forms
+  // Partnership Registry Forms
   const [partnerName, setPartnerName] = useState('');
   const [partnerCommitment, setPartnerCommitment] = useState('');
   const [partnerUnfunded, setPartnerUnfunded] = useState('');
@@ -64,8 +64,7 @@ export default function Home() {
   }, []);
 
   const getCoaName = (code: string) => {
-    const account = coa.find(a => a.code === code);
-    return account ? account.name : 'Unknown Account';
+    return coa.find(a => a.code === code)?.name || 'Unmapped Sub-Ledger Account';
   };
 
   const getInternalGlBalance = (accountCode: string) => {
@@ -110,11 +109,11 @@ export default function Home() {
         let status = 'VALIDATED';
         let exceptionReason = '';
         
-        if (entry.transactionType === 'Capital Call') {
+        if (entry.transactionType === 'Capital Drawdown Record') {
           const totalUnfundedAvailable = partners.reduce((sum, p) => sum + p.unfunded, 0);
           if (entry.totalAmountInCents > totalUnfundedAvailable) {
             status = 'EXCEPTION';
-            exceptionReason = 'Allocation Breach: Aggregated call volume exceeds total remaining registry headroom.';
+            exceptionReason = 'Allocation Threshold Breach: Total transaction volume triggers registry allocation limits under ruleset criteria.';
           }
         }
         return { ...entry, status, exceptionReason };
@@ -122,7 +121,7 @@ export default function Home() {
 
       setExtractedBatch(validatedEntries);
     } catch (err: any) {
-      alert(err.message || 'Processing error occurred.');
+      alert(err.message || 'System parsing anomaly.');
     } finally {
       setLoading(false);
     }
@@ -135,9 +134,8 @@ export default function Home() {
     let updatedPartners = [...partners];
 
     extractedBatch.forEach((entry) => {
-      // Clean JE-XXXX naming layout structure (no hyphen separators)
       const uniqueSerial = Math.floor(1000 + Math.random() * 9000);
-      const cleanJeCode = `JE${uniqueSerial}`;
+      const cleanJeCode = `JE${uniqueSerial}`; // Formatted as JE-XXXX style code (without hyphens)
 
       const newEntry = {
         id: cleanJeCode,
@@ -151,7 +149,7 @@ export default function Home() {
       
       updatedLedger = [newEntry, ...updatedLedger];
 
-      if (entry.transactionType === 'Capital Call' && entry.status === 'VALIDATED') {
+      if (entry.transactionType === 'Capital Drawdown Record' && entry.status === 'VALIDATED') {
         updatedPartners = updatedPartners.map(p => ({
           ...p,
           unfunded: Math.max(0, p.unfunded - (entry.totalAmountInCents * p.pct))
@@ -167,15 +165,14 @@ export default function Home() {
 
     setExtractedBatch([]);
     setInputText('');
-    alert('Batch transactions committed to ledger core successfully.');
+    alert('Sequential transactional payload posted down to book modules.');
   }
 
-  // COA Handlers
   const addAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode || !newName) return;
     if (coa.some(a => a.code === newCode)) {
-      alert('Account code configuration already exists.');
+      alert('Account code alignment collision.');
       return;
     }
     const updated = [...coa, { code: newCode, name: newName, category: newCat }].sort((a,b) => a.code.localeCompare(b.code));
@@ -191,7 +188,6 @@ export default function Home() {
     localStorage.setItem('term_coa', JSON.stringify(updated));
   };
 
-  // Partnership Handlers
   const addPartner = (e: React.FormEvent) => {
     e.preventDefault();
     if (!partnerName || !partnerCommitment) return;
@@ -223,38 +219,38 @@ export default function Home() {
   };
 
   const triggerDownload = (fileName: string, format: string) => {
-    const mockContent = `Asset Master Terminal Ingestion Audit Extract File\nReport Name: ${fileName}\nGenerated: 2026-06-10`;
-    const blob = new Blob([mockContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileName}.${format.toLowerCase()}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const dataString = `Transaction Ledger Ingestion Extract File\nReport Designation: ${fileName}\nExecution Sync Date: 2026-06-10`;
+    const fileBlob = new Blob([dataString], { type: 'text/plain' });
+    const downloadUrl = URL.createObjectURL(fileBlob);
+    const linkElement = document.createElement('a');
+    linkElement.href = downloadUrl;
+    linkElement.download = `${fileName}.${format.toLowerCase()}`;
+    document.body.appendChild(linkElement);
+    linkElement.click();
+    document.body.removeChild(linkElement);
+    URL.revokeObjectURL(downloadUrl);
   };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8f9fa', color: '#1e293b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* SIDEBAR COMPONENT */}
-      <div style={{ width: sidebarOpen ? '280px' : '64px', transition: 'width 0.2s ease', background: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b', boxSizing: 'border-box' }}>
-        <div style={{ padding: '20px 16px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-          {sidebarOpen && <span style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.01em', color: '#ffffff' }}>Asset Explorer Core</span>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}>
+      {/* SIDEBAR NAVIGATION RAIL */}
+      <div style={{ width: sidebarOpen ? '290px' : '64px', transition: 'width 0.15s ease', background: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b', boxSizing: 'border-box' }}>
+        <div style={{ padding: '24px 18px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {sidebarOpen && <span style={{ fontSize: '1.05rem', fontWeight: 700, letterSpacing: '-0.01em', color: '#ffffff' }}>Investments Explorer</span>}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}>
             {sidebarOpen ? '◀' : '▶'}
           </button>
         </div>
 
         <div style={{ flex: 1, padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {([
-            { id: 'ingestion', label: 'Document Ingestion Console', icon: '📥' },
+            { id: 'ingestion', label: 'File Import Parsing', icon: '📁' },
             { id: 'ledger', label: 'Transaction General Ledger', icon: '📖' },
             { id: 'coa', label: 'Chart of Accounts Manager', icon: '📊' },
             { id: 'registry', label: 'Partnership Registry Ledger', icon: '👥' },
             { id: 'recon', label: 'Reconciliation Audit Suite', icon: '🔄' },
-            { id: 'reports', label: 'Report Depository Vault', icon: '📁' }
+            { id: 'reports', label: 'Report Depository Vault', icon: '📥' }
           ]).map(tab => (
             <button
               key={tab.id}
@@ -264,7 +260,7 @@ export default function Home() {
                 alignItems: 'center',
                 gap: '12px',
                 width: '100%',
-                padding: '12px',
+                padding: '12px 14px',
                 border: 'none',
                 borderRadius: '6px',
                 background: activeTab === tab.id ? '#1e293b' : 'transparent',
@@ -285,51 +281,57 @@ export default function Home() {
         </div>
       </div>
 
-      {/* PRIMARY MODULE DISPLAY */}
+      {/* CORE WORKSPACE PANEL */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#0f172a' }}>
-            {activeTab === 'ingestion' && 'Document Ingestion & Exception Breakdown'}
+        <header style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '18px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: '#0f172a' }}>
+            {activeTab === 'ingestion' && 'Multi-Asset Log File Import Parsing Engine'}
             {activeTab === 'ledger' && 'Transaction Book Records'}
-            {activeTab === 'coa' && 'Chart of Accounts Settings Control'}
+            {activeTab === 'coa' && 'Chart of Accounts Configuration Matrix'}
             {activeTab === 'registry' && 'Capital Account Allocation Registry'}
             {activeTab === 'recon' && 'Automated Reconciliation Audit Matrix'}
             {activeTab === 'reports' && 'Corporate Performance Report Vault'}
           </h2>
-          <div style={{ fontSize: '0.75rem', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '4px', fontWeight: 600, color: '#475569' }}>
+          <div style={{ fontSize: '0.72rem', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 14px', borderRadius: '4px', fontWeight: 600, color: '#475569', letterSpacing: '0.03em' }}>
             ENVIRONMENT SECURE • ACTIVE
           </div>
         </header>
 
         <main style={{ padding: '30px', flex: 1, overflowY: 'auto' }}>
           
-          {/* TAB: INGESTION PIPELINE */}
+          {/* TAB: FILE IMPORT PARSING */}
           {activeTab === 'ingestion' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
               <div>
-                <h3 style={{ marginTop: 0, fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '12px' }}>1. Unstructured Document Ingestion Pipeline</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ background: '#0f172a', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>1</div>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>Ingest Raw Notice Log Payloads</h3>
+                </div>
                 <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Paste unstructured batch financial communication logs here..."
-                  style={{ width: '100%', height: '380px', padding: '14px', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', background: '#ffffff', resize: 'none' }}
+                  placeholder="Paste multi-transaction unstructured notice logs here..."
+                  style={{ width: '100%', height: '390px', padding: '14px', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', background: '#ffffff', resize: 'none' }}
                 />
-                <button onClick={handleAiParse} disabled={loading} style={{ marginTop: '14px', width: '100%', padding: '12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
-                  {loading ? 'Executing Multi-Entry Structural Segmentation...' : 'Execute Structured Ledger Extraction'}
+                <button onClick={handleAiParse} disabled={loading} style={{ marginTop: '14px', width: '100%', padding: '12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem' }}>
+                  {loading ? 'Executing Sequential Text Tokenization...' : 'Execute Structural Ledger Extraction'}
                 </button>
               </div>
 
               <div>
-                <h3 style={{ marginTop: 0, fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '12px' }}>2. Live Double-Entry Batch Preview</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ background: '#0f172a', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>2</div>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>Structured Multi-Entry Verification Matrix</h3>
+                </div>
                 {extractedBatch.length === 0 ? (
-                  <div style={{ border: '1px dashed #cbd5e1', borderRadius: '6px', height: '445px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', backgroundColor: '#ffffff', fontSize: '0.88rem' }}>
-                    Pipeline resting. Awaiting operational text engine data trigger.
+                  <div style={{ border: '1px dashed #cbd5e1', borderRadius: '6px', height: '455px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', backgroundColor: '#ffffff', fontSize: '0.85rem' }}>
+                    Awaiting log verification stream processing inputs.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ background: '#e2e8f0', padding: '12px 16px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Parsed Payload: {extractedBatch.length} Transaction Events Identified</span>
-                      <button onClick={postToLedgerBatch} style={{ padding: '8px 16px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Segmented Entries: {extractedBatch.length} Events Pending Post</span>
+                      <button onClick={postToLedgerBatch} style={{ padding: '8px 16px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>
                         Commit All Entries to Modules
                       </button>
                     </div>
@@ -349,14 +351,14 @@ export default function Home() {
                           </div>
                         )}
 
-                        <p style={{ margin: '3px 0', fontSize: '0.85rem', color: '#475569' }}><strong>Portfolio Account Name:</strong> {entry.fundName}</p>
-                        <p style={{ margin: '3px 0', fontSize: '0.85rem', color: '#475569' }}><strong>Aggregated Base Value:</strong> {((entry.totalAmountInCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</p>
+                        <p style={{ margin: '3px 0', fontSize: '0.85rem', color: '#475569' }}><strong>Portfolio Account Designation:</strong> {entry.fundName}</p>
+                        <p style={{ margin: '3px 0', fontSize: '0.85rem', color: '#475569' }}><strong>Calculated Volume Value:</strong> {((entry.totalAmountInCents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</p>
 
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', marginTop: '12px' }}>
                           <thead>
                             <tr style={{ borderBottom: '1px solid #cbd5e1', background: '#f8fafc', textAlign: 'left' }}>
                               <th style={{ padding: '6px' }}>Code</th>
-                              <th style={{ padding: '6px' }}>Account Mapping Label</th>
+                              <th style={{ padding: '6px' }}>Account Name Mapping</th>
                               <th style={{ padding: '6px', textAlign: 'right' }}>Debit (USD)</th>
                               <th style={{ padding: '6px', textAlign: 'right' }}>Credit (USD)</th>
                             </tr>
@@ -380,24 +382,24 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB: GENERAL LEDGER */}
+          {/* TAB: TRANSACTION GENERAL LEDGER */}
           {activeTab === 'ledger' && (
             <div>
               {journalEntries.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', background: '#ffffff', borderRadius: '6px', border: '1px dashed #cbd5e1', color: '#64748b' }}>No record postings saved down to transaction files.</div>
+                <div style={{ padding: '40px', textAlign: 'center', background: '#ffffff', borderRadius: '6px', border: '1px dashed #cbd5e1', color: '#64748b' }}>No validated journal runs discovered inside the balance sub-modules.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {journalEntries.map((entry) => (
                     <div key={entry.id} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff', padding: '18px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
                         <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.9rem' }}>{entry.id} — {entry.type}</span>
-                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Settlement Date: {entry.date} | Account Target: {entry.fundName}</span>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Settlement Effective Date: {entry.date} | Focus Node: {entry.fundName}</span>
                       </div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                         <thead>
                           <tr style={{ textAlign: 'left', color: '#475569', background: '#f8fafc' }}>
                             <th style={{ padding: '6px' }}>Code</th>
-                            <th style={{ padding: '6px' }}>Account Label Name</th>
+                            <th style={{ padding: '6px' }}>Account Description Name</th>
                             <th style={{ padding: '6px', textAlign: 'right' }}>Debit (USD)</th>
                             <th style={{ padding: '6px', textAlign: 'right' }}>Credit (USD)</th>
                           </tr>
@@ -420,22 +422,22 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB: CHART OF ACCOUNTS (NEW MOCK CONFIGURATION CONTROL PANEL) */}
+          {/* TAB: CHART OF ACCOUNTS */}
           {activeTab === 'coa' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px' }}>
               <div style={{ background: '#ffffff', padding: '20px', borderRadius: '6px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
-                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600 }}>Add Structural Account Map</h4>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600 }}>Add Sub-Ledger Account Code</h4>
                 <form onSubmit={addAccount} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '4px' }}>Account Serial Code</label>
-                    <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="e.g., 1400" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '4px' }}>Account Code ID</label>
+                    <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="e.g., 1500" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '4px' }}>Account Descriptive Name</label>
-                    <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g., Retained Earnings" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '4px' }}>Account Label Descriptor</label>
+                    <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g., Retained Capital Earnings" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '4px' }}>General Class Ledger</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '4px' }}>Balance Sheet Class</label>
                     <select value={newCat} onChange={(e) => setNewCat(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem', background: '#fff' }}>
                       <option value="Asset">Asset</option>
                       <option value="Liability">Liability</option>
@@ -445,7 +447,7 @@ export default function Home() {
                     </select>
                   </div>
                   <button type="submit" style={{ padding: '10px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', marginTop: '6px' }}>
-                    Inject Account Code Line
+                    Inject Account Target
                   </button>
                 </form>
               </div>
@@ -455,9 +457,9 @@ export default function Home() {
                   <thead>
                     <tr style={{ background: '#0f172a', color: '#ffffff', textAlign: 'left' }}>
                       <th style={{ padding: '12px' }}>Code</th>
-                      <th style={{ padding: '12px' }}>Account Descriptor Label</th>
-                      <th style={{ padding: '12px' }}>Ledger Classification</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Purge Actions</th>
+                      <th style={{ padding: '12px' }}>Dynamic Account Map Descriptor</th>
+                      <th style={{ padding: '12px' }}>Ledger Category Type</th>
+                      <th style={{ padding: '12px', textAlign: 'center' }}>Purge Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -479,30 +481,30 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB: REGISTRY LEDGER (MANUAL AND AUTOMATED ADHOC ALLOCATIONS MANAGER) */}
+          {/* TAB: PARTNERSHIP REGISTRY LEDGER */}
           {activeTab === 'registry' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ background: '#ffffff', padding: '20px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600 }}>Manual Partner Entity Provisioning Form</h4>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600 }}>Manual Registry Allocation Injector Form</h4>
                 <form onSubmit={addPartner} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '12px', alignItems: 'flex-end' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Investor Profile Name</label>
-                    <input type="text" value={partnerName} onChange={(e) => setPartnerName(e.target.value)} placeholder="e.g., Summit Trust" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Investor Entity Name</label>
+                    <input type="text" value={partnerName} onChange={(e) => setPartnerName(e.target.value)} placeholder="e.g., Apex Capital Fund" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Gross Total Commitment ($)</label>
-                    <input type="number" value={partnerCommitment} onChange={(e) => setPartnerCommitment(e.target.value)} placeholder="e.g., 100000" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Total Commitment Value ($)</label>
+                    <input type="number" value={partnerCommitment} onChange={(e) => setPartnerCommitment(e.target.value)} placeholder="e.g., 500000" required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Unfunded Baseline Target ($)</label>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Baseline Unfunded ($)</label>
                     <input type="number" value={partnerUnfunded} onChange={(e) => setPartnerUnfunded(e.target.value)} placeholder="Defaults to commitment" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Pro-Rata Weight Ratio (%)</label>
-                    <input type="number" step="0.01" value={partnerPct} onChange={(e) => setPartnerPct(e.target.value)} placeholder="e.g., 25.00" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>Pro-Rata Share Weight (%)</label>
+                    <input type="number" step="0.01" value={partnerPct} onChange={(e) => setPartnerPct(e.target.value)} placeholder="e.g., 20.00" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
                   </div>
                   <button type="submit" style={{ padding: '9px 18px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
-                    Inject Profile Block
+                    Inject Profile Node
                   </button>
                 </form>
               </div>
@@ -511,11 +513,11 @@ export default function Home() {
                 <thead>
                   <tr style={{ background: '#0f172a', color: '#ffffff', textAlign: 'left' }}>
                     <th style={{ padding: '12px' }}>Identifier</th>
-                    <th style={{ padding: '12px' }}>Investor Registry Profile Entity Name</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Pro-Rata Matrix Weight</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Total Asset Commitment</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Remaining Unfunded Capital Balance</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Purge Action</th>
+                    <th style={{ padding: '12px' }}>Investor Account Profile Node Title</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Pro-Rata Metric Share Weight</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Capital Allocation Commitment</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Remaining Unfunded Reserve Headroom</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Purge Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -540,11 +542,11 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB: AUDIT RECONCILIATION */}
+          {/* TAB: RECONCILIATION SUITE */}
           {activeTab === 'recon' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>Comparison mapping configuration validating transactional book metrics against external bank statement data feeds.</p>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>Comparison auditing verification matrix checking sub-ledger mappings against external third-party statements.</p>
                 <button onClick={runAutoReconciliation} style={{ padding: '10px 20px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
                   Execute Automated Matching Cycle
                 </button>
@@ -553,13 +555,13 @@ export default function Home() {
               <table style={{ width: '100%', borderCollapse: 'collapse', background: '#ffffff', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: '#334155', color: 'white', textAlign: 'left' }}>
-                    <th style={{ padding: '12px' }}>Category Type</th>
-                    <th style={{ padding: '12px' }}>Account Mapping</th>
-                    <th style={{ padding: '12px' }}>External Ledger Stream Feed Description</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Internal Book Balance</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>External Target Balance</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Variance Break</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Matching Audit State</th>
+                    <th style={{ padding: '12px' }}>Category Stream Node</th>
+                    <th style={{ padding: '12px' }}>Account Code Map</th>
+                    <th style={{ padding: '12px' }}>External Core Document Stream Description</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Internal Ledger Balance</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>External Account Target Value</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Variance Discrepancy Break</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Audit Resolution State</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -586,7 +588,7 @@ export default function Home() {
                         </td>
                         <td style={{ padding: '12px', textAlign: 'center' }}>
                           <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: isMatched ? '#bbf7d0' : '#fecdd3', color: isMatched ? '#166534' : '#991b1b' }}>
-                            {isMatched ? 'MATCHED' : 'UNRESOLVED VARIANCE'}
+                            {isMatched ? 'VERIFIED MATCH' : 'UNRESOLVED VARIANCE'}
                           </span>
                         </td>
                       </tr>
@@ -597,16 +599,16 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB: COMPREHENSIVE DOWNLOADING REPORT DEPOSITORY */}
+          {/* TAB: REPORT DEPOSITORY VAULT */}
           {activeTab === 'reports' && (
             <div>
               <table style={{ width: '100%', borderCollapse: 'collapse', background: '#ffffff', border: '1px solid #e2e8f0', fontSize: '0.88rem' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
-                    <th style={{ padding: '12px' }}>Report Key</th>
-                    <th style={{ padding: '12px' }}>Document Manifest File Location Name</th>
-                    <th style={{ padding: '12px' }}>Accounting Category</th>
-                    <th style={{ padding: '12px' }}>Target Statement Date</th>
+                    <th style={{ padding: '12px' }}>Report Identifier Code</th>
+                    <th style={{ padding: '12px' }}>Manifest Document Location Filename</th>
+                    <th style={{ padding: '12px' }}>Sub-Ledger Target Category</th>
+                    <th style={{ padding: '12px' }}>Generation Target Date</th>
                     <th style={{ padding: '12px', textAlign: 'center' }}>Action Export Executions</th>
                   </tr>
                 </thead>
@@ -621,16 +623,16 @@ export default function Home() {
                         <button onClick={() => triggerDownload(rep.name, rep.format)} style={{ background: '#0f172a', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
                           Download Export File .{rep.format.toLowerCase()}
                         </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-    </main>
-  </div>
-</div>
-);
+        </main>
+      </div>
+    </div>
+  );
 }
