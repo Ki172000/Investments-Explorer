@@ -442,7 +442,6 @@ export default function Home() {
           {activeTab === 'ingestion' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
               <div>
-                {/* REFACTORED TO CRUSH THE TYPO BUG */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', width: '100%' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ background: '#0f172a', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>1</div>
@@ -654,7 +653,8 @@ export default function Home() {
           {activeTab === 'registry' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', gap: '4px', background: '#ffffff', padding: '8px 8px 0 8px', borderRadius: '6px 6px 0 0', border: '1px solid #e2e8f0', borderBottom: 'none' }}>
+              {/* FIXED PROPERTY DUPLICATIONS HERE */}
+              <div style={{ display: 'flex', gap: '4px', background: '#ffffff', padding: '8px 8px 0 8px', borderRadius: '6px 6px 0 0', border: '1px solid #e2e8f0', borderBottomColor: 'transparent' }}>
                 {(['ALL', 'LP', 'GP', 'Affiliate'] as const).map(tabKey => (
                   <button
                     key={tabKey}
