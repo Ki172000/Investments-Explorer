@@ -9,89 +9,77 @@ export async function POST(request: Request) {
     }
 
     const cleanText = documentText.trim();
-    const lowercaseText = cleanText.toLowerCase();
     
-    // --- 1. DYNAMIC FUND ENTITY EXTRACTION ---
-    let fundName = 'AGIP Alternative Investments IV';
-    const fundRegex = /(?:fund|entity|partnership|master fund entity)\s*:\s*([^\n\r]+)/i;
-    const fundMatch = cleanText.match(fundRegex);
-    if (fundMatch && fundMatch[1]) {
-      fundName = fundMatch[1].trim();
-    }
+    // Split the document into discrete transaction blocks using common batch headers
+    const blocks = cleanText.split(/transaction architecture batch file|transaction frame|batch file/i);
+    const extractedEntries: any[] = [];
 
-    // --- 2. CONTEXT-BASED MULTI-ASSET AMOUNT PARSING ---
-    let capitalCallCents = 0;
-    let managementFeeCents = 0;
-
-    // Isolate paragraphs/sections to extract numbers accurately
-    const lines = cleanText.split('\n');
-    let currentSection = '';
-
-    lines.forEach(line => {
-      const lowerLine = line.toLowerCase();
-      if (lowerLine.includes('capital call drawdown') || lowerLine.includes('asset deployment')) {
-        currentSection = 'capital';
-      } else if (lowerLine.includes('management fee') || lowerLine.includes('management charges')) {
-        currentSection = 'fee';
-      }
-
-      // Extract currency amounts in the current active section
-      const valMatch = line.match(/(?:\$|php|eur|gbp)\s*([0-9,]+(?:\.[0-9]{2})?)/i);
-      if (valMatch && valMatch[1]) {
-        const numericValue = Math.round(parseFloat(valMatch[1].replace(/,/g, '')) * 100);
-        
-        if (currentSection === 'capital' && capitalCallCents === 0) {
-          capitalCallCents = numericValue;
-        } else if (currentSection === 'fee' && managementFeeCents === 0) {
-          managementFeeCents = numericValue;
-        }
-      }
-    });
-
-    // --- 3. DETERMINE TRANSACTION TYPE & GENERATE BALANCED GL ENTRIES ---
-    let transactionType = 'Capital Call';
-    let totalAmountInCents = 0;
-    let suggestedLedgerLines: any[] = [];
-
-    // If both sections were found and parsed, create a blended net journal entry!
-    if (capitalCallCents > 0 && managementFeeCents > 0) {
-      transactionType = 'Blended Call & Fee Notice';
-      totalAmountInCents = capitalCallCents + managementFeeCents; // True Gross Exposure Evaluated
+    // Skip index 0 if it only contains the main header text before the first file block
+    blocks.forEach((block, index) => {
+      if (index === 0 && !block.toLowerCase().includes('target fund entity')) return;
       
-      suggestedLedgerLines = [
-        { accountCode: '1100', accountName: 'Cash / Clearing Account', debitInCents: capitalCallCents, creditInCents: 0 },
-        { accountCode: '5100', accountName: 'Management & Performance Fees', debitInCents: managementFeeCents, creditInCents: 0 },
-        { accountCode: '3100', accountName: 'Partners Capital - LP Contributions', debitInCents: 0, creditInCents: capitalCallCents + managementFeeCents }
-      ];
-    } 
-    // Fallbacks if only one specific section parsed
-    else if (managementFeeCents > 0 || lowercaseText.includes('management fee')) {
-      transactionType = 'Management Fee Notice';
-      totalAmountInCents = managementFeeCents > 0 ? managementFeeCents : 125000000; // $1.25M
-      suggestedLedgerLines = [
-        { accountCode: '5100', accountName: 'Management & Performance Fees', debitInCents: totalAmountInCents, creditInCents: 0 },
-        { accountCode: '1100', accountName: 'Cash / Clearing Account', debitInCents: 0, creditInCents: totalAmountInCents }
-      ];
-    } else {
-      transactionType = 'Capital Call';
-      totalAmountInCents = capitalCallCents > 0 ? capitalCallCents : 150000000;
-      suggestedLedgerLines = [
-        { accountCode: '1100', accountName: 'Cash / Clearing Account', debitInCents: totalAmountInCents, creditInCents: 0 },
-        { accountCode: '3100', accountName: 'Partners Capital - LP Contributions', debitInCents: 0, creditInCents: totalAmountInCents }
-      ];
-    }
+      const lowercaseBlock = block.toLowerCase();
+      if (!lowercaseBlock.trim()) return;
 
-    // --- 4. RETURN CLEAN RESPONSE STRUCT ---
-    return NextResponse.json({
-      fundName,
-      transactionType,
-      totalAmountInCents,
-      currency: 'USD',
-      noticeDate: new Date().toISOString().split('T')[0],
-      suggestedLedgerLines
+      // --- 1. DETERMINE TRANSACTION TYPE ---
+      let transactionType = 'Capital Call';
+      if (lowercaseBlock.includes('management fee') || lowercaseBlock.includes('advisory fee') || lowercaseBlock.includes('invoice amount')) {
+        transactionType = 'Management Fee Notice';
+      } else if (lowercaseBlock.includes('distribution') || lowercaseBlock.includes('return of capital') || lowercaseBlock.includes('divestment')) {
+        transactionType = 'Fund Distribution';
+      }
+
+      // --- 2. EXTRACT ENTITY NAME ---
+      let fundName = 'AGIP Alternative Investments IV';
+      const fundRegex = /(?:fund entity|target fund entity|partnership|fund)\s*:\s*([^\n\r]+)/i;
+      const fundMatch = block.match(fundRegex);
+      if (fundMatch && fundMatch[1]) {
+        fundName = fundMatch[1].trim();
+      }
+
+      // --- 3. EXTRACT NUMERIC EXPOSURE (CENTS) ---
+      let amountInCents = 0;
+      const amountRegex = /(?:\$|php|eur|gbp)\s*([0-9,]+(?:\.[0-9]{2})?)/i;
+      const amountMatch = block.match(amountRegex);
+      if (amountMatch && amountMatch[1]) {
+        const normalized = amountMatch[1].replace(/,/g, '');
+        amountInCents = Math.round(parseFloat(normalized) * 100);
+      }
+
+      if (amountInCents === 0) return; // Skip invalid blocks
+
+      // --- 4. GENERATE BALANCED GENEVA DOUBLE-ENTRY SCHEMA ---
+      let lines: any[] = [];
+      if (transactionType === 'Capital Call') {
+        lines = [
+          { accountCode: '1100', accountName: 'Cash / Clearing Account', debitInCents: amountInCents, creditInCents: 0 },
+          { accountCode: '3100', accountName: 'Partners Capital - LP Contributions', debitInCents: 0, creditInCents: amountInCents }
+        ];
+      } else if (transactionType === 'Management Fee Notice') {
+        lines = [
+          { accountCode: '5100', accountName: 'Management & Performance Fees', debitInCents: amountInCents, creditInCents: 0 },
+          { accountCode: '1100', accountName: 'Cash / Clearing Account', debitInCents: 0, creditInCents: amountInCents }
+        ];
+      } else if (transactionType === 'Fund Distribution') {
+        lines = [
+          { accountCode: '3100', accountName: 'Partners Capital - LP Contributions', debitInCents: amountInCents, creditInCents: 0 },
+          { accountCode: '1100', accountName: 'Cash / Clearing Account', debitInCents: 0, creditInCents: amountInCents }
+        ];
+      }
+
+      extractedEntries.push({
+        id: `EXT-${Math.floor(1000 + Math.random() * 9000)}`,
+        fundName,
+        transactionType,
+        totalAmountInCents: amountInCents,
+        currency: 'USD',
+        suggestedLedgerLines: lines
+      });
     });
+
+    return NextResponse.json({ entries: extractedEntries });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal processing error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal batch processing error' }, { status: 500 });
   }
 }
