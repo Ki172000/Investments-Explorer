@@ -84,7 +84,7 @@ export default function Home() {
   useEffect(() => {
     setReconData(prev => {
       return prev.map(item => {
-        if (item.manualOverride) return item; // Preserve manual user inputs
+        if (item.manualOverride) return item; 
         
         let calculatedInternal = 0;
         if (item.accountCode === '1200') calculatedInternal = 5000000; 
@@ -99,7 +99,6 @@ export default function Home() {
         });
 
         const absInternal = Math.abs(calculatedInternal);
-        // Auto-match logic if values balance cleanly
         const automaticallyMatches = absInternal === item.externalAmount;
 
         return {
@@ -190,7 +189,7 @@ export default function Home() {
 
     extractedBatch.forEach((entry) => {
       const uniqueSerial = Math.floor(1000 + Math.random() * 9000);
-      const targetId = `JE${uniqueSerial}`; // Aligned directly to JE-XXXX numbering (no formatting dashes inside string)
+      const targetId = `JE${uniqueSerial}`; 
 
       const newEntry = {
         id: targetId,
@@ -279,7 +278,6 @@ export default function Home() {
 
     let targetId = '';
     if (entType === 'LP') {
-      // Build string using fixed padded sequence rule: LP-XX
       const pad = nextLpSequence < 10 ? `0${nextLpSequence}` : `${nextLpSequence}`;
       targetId = `LP-${pad}`;
       const nextSeq = nextLpSequence + 1;
@@ -444,7 +442,8 @@ export default function Home() {
           {activeTab === 'ingestion' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyBreak: 'space-between', marginBottom: '12px', width: '100%' }}>
+                {/* REFACTORED TO CRUSH THE TYPO BUG */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', width: '100%' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ background: '#0f172a', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>1</div>
                     <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>Ingestion Input Buffer</h3>
@@ -651,11 +650,10 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEWPORT: PARTNERSHIP REGISTRY LEDGER WITH AFFILIATE SUB-TABS */}
+          {/* VIEWPORT: PARTNERSHIP REGISTRY LEDGER */}
           {activeTab === 'registry' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* SUB-TAB NAV BAR */}
               <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', gap: '4px', background: '#ffffff', padding: '8px 8px 0 8px', borderRadius: '6px 6px 0 0', border: '1px solid #e2e8f0', borderBottom: 'none' }}>
                 {(['ALL', 'LP', 'GP', 'Affiliate'] as const).map(tabKey => (
                   <button
@@ -750,7 +748,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEWPORT: RECONCILIATION MODULE WORKSPACE (iRecs Framework Layout Replacement) */}
+          {/* VIEWPORT: RECONCILIATION MODULE WORKSPACE */}
           {activeTab === 'recon' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
