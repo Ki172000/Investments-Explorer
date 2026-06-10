@@ -31,8 +31,6 @@ export default function Home() {
   const [partners, setPartners] = useState<any[]>([]);
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
-  
-  // Array storage for multi-entry batch extraction
   const [extractedBatch, setExtractedBatch] = useState<any[]>([]);
 
   const [reconItems, setReconItems] = useState<any[]>(EXTERNAL_FEED);
@@ -88,7 +86,6 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Validate each item in the parsed batch against compliance constraints
       const validatedEntries = (data.entries || []).map((entry: any) => {
         let status = 'VALIDATED';
         let exceptionReason = '';
@@ -111,12 +108,11 @@ export default function Home() {
     }
   }
 
-  function postBatchToLedger() {
+  function postToLedgerBatch() {
     if (extractedBatch.length === 0) return;
 
     let updatedLedger = [...journalEntries];
     let updatedPartners = [...partners];
-    let updatedReports = [...reports];
 
     extractedBatch.forEach((entry, index) => {
       const newEntry = {
@@ -141,7 +137,6 @@ export default function Home() {
 
     setPartners(updatedPartners);
     setJournalEntries(updatedLedger);
-    setReports(updatedReports);
     
     localStorage.setItem('inv_partners', JSON.stringify(updatedPartners));
     localStorage.setItem('inv_ledger', JSON.stringify(updatedLedger));
@@ -192,7 +187,6 @@ export default function Home() {
         ))}
       </nav>
 
-      {/* WORKSPACE AREA */}
       {activeTab === 'ingestion' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
           <div>
@@ -270,7 +264,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* TAB 2: GENEVA LEDGER */}
       {activeTab === 'ledger' && (
         <div>
           <h3 style={{ marginTop: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: 600, marginBottom: '15px' }}>Geneva Transaction General Ledger</h3>
@@ -311,7 +304,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* TAB 3: INVESTRAN PARTNERSHIP REGISTRY */}
       {activeTab === 'investran' && (
         <div>
           <h3 style={{ marginTop: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: 600, marginBottom: '15px' }}>Investran Partnership Capital Account Registry</h3>
@@ -342,7 +334,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* TAB 4: IRECS RECONCILIATION WORKSPACE */}
       {activeTab === 'recon' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -402,7 +393,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* TAB 5: REPORTS */}
       {activeTab === 'reports' && (
         <div>
           <h3 style={{ marginTop: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: 600, marginBottom: '15px' }}>Institutional Financial Report Vault</h3>
