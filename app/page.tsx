@@ -73,7 +73,6 @@ export default function Home() {
     if (savedLedger) {
       setJournalEntries(JSON.parse(savedLedger));
     } else {
-      // Seed default entries chronologically
       const seedEntries = [
         {
           id: 1,
@@ -132,7 +131,6 @@ export default function Home() {
     }
     setLoading(true);
     try {
-      // Mock parsing process matching typical file uploads
       setTimeout(() => {
         const mockExtracted = [
           {
@@ -329,17 +327,19 @@ export default function Home() {
     localStorage.setItem('term_entities_v3', JSON.stringify(updated));
   };
 
-  // Header Title Resolver Maps
+  // Explicit Tab Descriptor Maps
+  const tabsConfig = [
+    { id: 'ingestion', label: 'File & Text Import Parsing', icon: '📥' },
+    { id: 'ledger', label: 'Transactions - General Ledger', icon: '📖' },
+    { id: 'coa', label: 'Accounts Manager', icon: '📊' },
+    { id: 'registry', label: 'Funds Partnership Directory', icon: '👥' },
+    { id: 'recon', label: 'Reconciliation & Matching', icon: '🔄' },
+    { id: 'reports', label: 'Report Depository', icon: '📁' }
+  ];
+
   const getHeaderTitle = () => {
-    switch (activeTab) {
-      case 'ingestion': return 'Notice Ingestion & Exception Parsing';
-      case 'ledger': return 'Geneva Asset General Ledger';
-      case 'coa': return 'Accounts Manager';
-      case 'registry': return 'Investran Partnership Registry';
-      case 'recon': return 'iRecs Match & Reconciliation';
-      case 'reports': return 'Built-in Report Depository';
-      default: return 'Investments Explorer Terminal';
-    }
+    const match = tabsConfig.find(t => t.id === activeTab);
+    return match ? match.label : 'Terminal Core Workspace';
   };
 
   return (
@@ -348,21 +348,14 @@ export default function Home() {
       {/* Side Navigation Panel */}
       <div style={{ width: sidebarOpen ? '290px' : '64px', transition: 'width 0.15s ease', background: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
         <div style={{ padding: '24px 18px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-          {sidebarOpen && <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>Investments Explorer</span>}
+          {sidebarOpen && <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>Terminal Control</span>}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
             {sidebarOpen ? '◀' : '▶'}
           </button>
         </div>
 
         <div style={{ flex: 1, padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {[
-            { id: 'ingestion', label: 'Notice Ingestion & Exception Parsing', icon: '📥' },
-            { id: 'ledger', label: 'Geneva Asset General Ledger', icon: '📖' },
-            { id: 'coa', label: 'Accounts Manager', icon: '📊' },
-            { id: 'registry', label: 'Investran Partnership Registry', icon: '👥' },
-            { id: 'recon', label: 'iRecs Match & Reconciliation', icon: '🔄' },
-            { id: 'reports', label: 'Built-in Report Depository', icon: '📁' }
-          ].map(tab => (
+          {tabsConfig.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -391,7 +384,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Terminal Shell Layout */}
+      {/* Main Layout Workspace Shell */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <header style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '18px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: '#0f172a' }}>
@@ -404,7 +397,7 @@ export default function Home() {
 
         <main style={{ padding: '30px', flex: 1, overflowY: 'auto' }}>
           
-          {/* VIEW: INGESTION WORKSPACE */}
+          {/* VIEW: FILE & TEXT IMPORT PARSING */}
           {activeTab === 'ingestion' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
               <div>
@@ -486,7 +479,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEW: TRANSACTION GENERAL LEDGER */}
+          {/* VIEW: TRANSACTIONS - GENERAL LEDGER */}
           {activeTab === 'ledger' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -637,7 +630,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEW: INVESTRAN PARTNERSHIP REGISTRY */}
+          {/* VIEW: FUNDS PARTNERSHIP DIRECTORY */}
           {activeTab === 'registry' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', gap: '4px', background: '#ffffff', padding: '8px 8px 0 8px', borderRadius: '6px', border: '1px solid #e2e8f0', borderBottom: 'none' }}>
@@ -727,7 +720,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEW: IRECS MATCH & RECONCILIATION */}
+          {/* VIEW: RECONCILIATION & MATCHING */}
           {activeTab === 'recon' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -771,7 +764,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEW: BUILT-IN REPORT DEPOSITORY */}
+          {/* VIEW: REPORT DEPOSITORY */}
           {activeTab === 'reports' && (
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#ffffff', border: '1px solid #e2e8f0', fontSize: '0.88rem' }}>
               <thead>
