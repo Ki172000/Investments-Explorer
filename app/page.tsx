@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-// Baseline Configurations
+// Baseline Chart of Accounts Architecture
 const DEFAULT_COA = [
   { code: '1100', name: 'Cash / Clearing Account', category: 'Asset', description: 'Main clearing custody cash balances', mtd: 1250000, qtd: 5000000, ytd: 12000000, itd: 45000000 },
   { code: '1200', name: 'Private Equity Investments (Fair Value)', category: 'Asset', description: 'Partnership portfolio underlying cost/fv valuation', mtd: 5000000, qtd: 15000000, ytd: 45000000, itd: 120000000 },
@@ -12,37 +12,51 @@ const DEFAULT_COA = [
   { code: '5100', name: 'Management & Performance Fees', category: 'Expense', description: 'Accrued fund manager operational calculations', mtd: 1250000, qtd: 3750000, ytd: 3750000, itd: 15000000 }
 ];
 
+const INITIAL_ENTITIES = [
+  { id: 'LP-01', name: 'Alpha Endowment Fund', type: 'LP', targetFund: 'AGIP Alternative Investments IV' },
+  { id: 'LP-02', name: 'Beacon Pension Plan', type: 'LP', targetFund: 'AGIP Alternative Investments IV' },
+  { id: 'LP-03', name: 'Kian Wealth Management', type: 'LP', targetFund: 'AGIP Alternative Investments IV' },
+  { id: 'GP-01', name: 'AGIP Capital Partners LLC', type: 'GP', targetFund: 'AGIP Alternative Investments IV' }
+];
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<string>('ingestion');
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // App Core States
+  // App State Restoration Modules
   const [coa, setCoa] = useState<any[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [extractedBatch, setExtractedBatch] = useState<any[]>([]);
+  const [reconData, setReconData] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
 
-  // Accounts Manager UI States
+  // Accounts Manager Balance Horizon Toggles
   const [balanceFilter, setBalanceFilter] = useState<'MTD' | 'QTD' | 'YTD' | 'ITD'>('MTD');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   
-  // Account Form Control
+  // Account Form Generation Buffers
   const [newCode, setNewCode] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState('Asset');
   const [newDesc, setNewDesc] = useState('');
 
-  // Selected GL Entry for explicit edit/delete actions
+  // General Ledger Action Toolbars Controlled Selectors
   const [selectedGlId, setSelectedGlId] = useState<string | null>(null);
   const [isEditingGl, setIsEditingGl] = useState(false);
 
-  // Hydrate from Storage Architecture
+  // Sync Storage Engine
   useEffect(() => {
-    const savedCoa = localStorage.getItem('term_coa_v4');
-    const savedLedger = localStorage.getItem('term_ledger_v4');
+    const savedCoa = localStorage.getItem('term_coa_v6');
+    const savedLedger = localStorage.getItem('term_ledger_v6');
+    const savedEntities = localStorage.getItem('term_entities_v6');
+    const savedReports = localStorage.getItem('term_reports_v6');
+    const savedRecon = localStorage.getItem('term_recon_v6');
 
     setCoa(savedCoa ? JSON.parse(savedCoa) : DEFAULT_COA);
+    setEntities(savedEntities ? JSON.parse(savedEntities) : INITIAL_ENTITIES);
     
     if (savedLedger) {
       setJournalEntries(JSON.parse(savedLedger));
@@ -51,7 +65,7 @@ export default function Home() {
         {
           id: 'GL-0001',
           date: '2026-06-10',
-          type: 'Automated System Ingestion - Multi-Line Allocation',
+          type: 'Automated System Ingestion - Bulk Allocation Run',
           status: 'VALIDATED',
           origin: 'AUTOMATED',
           lines: [
@@ -72,30 +86,53 @@ export default function Home() {
         }
       ]);
     }
+
+    setReports(savedReports ? JSON.parse(savedReports) : [
+      { id: 'REP-082', name: 'Q2_2026_Trial_Balance', type: 'Trial Balance', date: '2026-06-09', format: 'PDF' },
+      { id: 'REP-083', name: 'General_Ledger_Audit_Log', type: 'Ledger Audit', date: '2026-06-10', format: 'CSV' }
+    ]);
+
+    setReconData(savedRecon ? JSON.parse(savedRecon) : [
+      { id: 'REC-001', type: 'Cash Clearing Account Wire Audit', accountCode: '1100', internalAmount: 0, externalAmount: 1250000, isMatched: false },
+      { id: 'REC-002', type: 'Portfolio Valuation Custody Lock', accountCode: '1200', internalAmount: 5000000, externalAmount: 5000000, isMatched: true }
+    ]);
   }, []);
 
   const saveLedger = (updated: any[]) => {
     setJournalEntries(updated);
-    localStorage.setItem('term_ledger_v4', JSON.stringify(updated));
+    localStorage.setItem('term_ledger_v6', JSON.stringify(updated));
   };
 
   const getCoaName = (code: string) => {
     return coa.find(a => a.code === code)?.name || 'Unmapped Sub-Ledger Account';
   };
 
-  // Multi-entry unstructured pipeline logic simulator
+  // Native Native File Import Handler Link Function
+  const handleNativeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const currentUploadedFile = e.target.files?.[0];
+    if (!currentUploadedFile) return;
+
+    const fileParserReader = new FileReader();
+    fileParserReader.onload = async (evt) => {
+      const textResult = evt.target?.result as string;
+      setInputText(textResult);
+    };
+    fileParserReader.readAsText(currentUploadedFile);
+  };
+
+  // Multi-Entry Pipeline Engine Validation Engine
   async function handleMultiEntryParse() {
     if (!inputText.trim()) return;
     setLoading(true);
     
     setTimeout(() => {
-      // Simulate validation engine parsing multiple transaction lines with nested exceptions if necessary
+      const nextSeq = String(journalEntries.length + 1).padStart(4, '0');
       setExtractedBatch([
         {
-          id: `GL-000${journalEntries.length + 1}`,
-          transactionType: 'Bulk Capital Call & Management Fee Distribution Allocation',
+          id: `GL-${nextSeq}`,
+          transactionType: 'Bulk Capital Call Calldown & Management Fee Distribution Allocation',
           status: 'VALIDATED',
-          exceptionReason: 'None. Double-entry balancing validated across multi-tier accounts.',
+          exceptionReason: 'None. Matrix balances confirmed perfectly.',
           lines: [
             { accountCode: '1100', debit: 2500000, credit: 0 },
             { accountCode: '5100', debit: 1250000, credit: 0 },
@@ -127,36 +164,7 @@ export default function Home() {
     setInputText('');
   }
 
-  // Add Account Structure Execution
-  function handleAddAccount(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newCode || !newTitle) return;
-
-    const added = {
-      code: newCode,
-      name: newTitle,
-      category: newType,
-      description: newDesc || 'N/A',
-      mtd: 0, qtd: 0, ytd: 0, itd: 0
-    };
-
-    const updatedCoa = [...coa, added];
-    setCoa(updatedCoa);
-    localStorage.setItem('term_coa_v4', JSON.stringify(updatedCoa));
-
-    setNewCode('');
-    setNewTitle('');
-    setNewDesc('');
-  }
-
-  function deleteAccount(code: string) {
-    const updated = coa.filter(a => a.code !== code);
-    setCoa(updated);
-    localStorage.setItem('term_coa_v4', JSON.stringify(updated));
-    setActiveDropdown(null);
-  }
-
-  // GL Controlled Action Functions
+  // General Ledger Action Toolbars Control Definitions (GL-XXXX Sequence Setup)
   function executeAddBlankRowGl() {
     const nextSeq = String(journalEntries.length + 1).padStart(4, '0');
     const newGl = {
@@ -174,25 +182,50 @@ export default function Home() {
     setSelectedGlId(`GL-${nextSeq}`);
   }
 
-  function executeDeleteSelectedGl() {
-    if (!selectedGlId) return;
-    const updated = journalEntries.filter(e => e.id !== selectedGlId);
-    saveLedger(updated);
-    setSelectedGlId(null);
-    setIsEditingGl(false);
+  // Account Profiles Registry Controls
+  function handleAddAccount(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newCode || !newTitle) return;
+
+    const added = {
+      code: newCode,
+      name: newTitle,
+      category: newType,
+      description: newDesc || 'N/A',
+      mtd: 0, qtd: 0, ytd: 0, itd: 0
+    };
+
+    const updatedCoa = [...coa, added];
+    setCoa(updatedCoa);
+    localStorage.setItem('term_coa_v6', JSON.stringify(updatedCoa));
+
+    setNewCode('');
+    setNewTitle('');
+    setNewDesc('');
   }
 
+  function deleteAccount(code: string) {
+    const updated = coa.filter(a => a.code !== code);
+    setCoa(updated);
+    localStorage.setItem('term_coa_v6', JSON.stringify(updated));
+    setActiveDropdown(null);
+  }
+
+  // ALL 6 DISTINCT TAB OBJECTS FULLY CONFIGURED
   const sidebarTabs = [
     { id: 'ingestion', label: 'File & Text Import Parsing', icon: '📥' },
     { id: 'ledger', label: 'Transactions - General Ledger', icon: '📖' },
-    { id: 'coa', label: 'Accounts Manager', icon: '📊' }
+    { id: 'coa', label: 'Accounts Manager', icon: '📊' },
+    { id: 'registry', label: 'Funds Partnership Directory', icon: '👥' },
+    { id: 'recon', label: 'Reconciliation & Matching', icon: '🔄' },
+    { id: 'reports', label: 'Report Depository', icon: '📁' }
   ];
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* 1. BRANDED SIDEBAR: INVESTMENTS EXPLORER */}
-      <div style={{ width: '280px', background: '#0b1329', color: '#cbd5e1', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
+      {/* 1. SIDEBAR NAVIGATION: INVESTMENTS EXPLORER */}
+      <div style={{ width: '290px', background: '#0b1329', color: '#cbd5e1', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
         <div style={{ padding: '24px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b' }}>
           <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em' }}>Investments Explorer</span>
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>◀</span>
@@ -233,10 +266,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* WORKSPACE APP FRAMEWORK CONTAINER */}
+      {/* 2. RIGHT DISPLAY WORKSPACE FRAMEWORK */}
       <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         
-        {/* Top Header Panel Status Bar */}
+        {/* Top Status Belt */}
         <div style={{ borderBottom: '1px solid #e2e8f0', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff' }}>
           <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 600, color: '#0f172a', letterSpacing: '-0.02em' }}>
             {sidebarTabs.find(t => t.id === activeTab)?.label}
@@ -246,18 +279,16 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Workspace Display Area */}
+        {/* Dynamic Inner Panel Hub */}
         <div style={{ padding: '32px', flexGrow: 1 }}>
           
-          {/* TAB VIEW 1: FILE & TEXT IMPORT PARSING (MULTI-ENTRY PIPELINE) */}
+          {/* VIEW 1: FILE & TEXT IMPORT PARSING (WITH ATTACHMENT PIPELINE TRIGGER) */}
           {activeTab === 'ingestion' && (
             <div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '40px', alignItems: 'start' }}>
-                
-                {/* Text Data Area */}
                 <div>
                   <h3 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600, color: '#334155' }}>
-                    1. Input Text Data (Supports Multi-Entry Parsing Run)
+                    1. Input Text Data & Structural Document Import Pipeline
                   </h3>
                   
                   <div style={{ position: 'relative' }}>
@@ -267,6 +298,23 @@ export default function Home() {
                       placeholder="Paste multi-line structural notice logs or bulk transaction allocations..."
                       style={{ width: '100%', height: '380px', padding: '16px', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.88rem', lineHeight: '1.5', resize: 'none', background: '#ffffff', outline: 'none' }}
                     />
+                    
+                    {/* RESTORED FILE SYSTEM BASE TARGET PIPELINE LINK */}
+                    <div style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 5 }}>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleNativeFileUpload} 
+                        accept=".txt,.csv,.json,.log" 
+                        style={{ display: 'none' }} 
+                      />
+                      <button 
+                        onClick={() => fileInputRef.current?.click()} 
+                        style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, color: '#475569' }}
+                      >
+                        Choose File Base Target...
+                      </button>
+                    </div>
                   </div>
 
                   <button 
@@ -278,19 +326,16 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Verification/Validation Breakdown Panel */}
                 <div>
                   <h3 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600, color: '#334155' }}>
                     2. Validated Multi-Entry Results & Exception Logs
                   </h3>
-                  
                   {extractedBatch.length === 0 ? (
                     <div style={{ border: '1px dashed #cbd5e1', borderRadius: '6px', height: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', backgroundColor: '#ffffff', fontSize: '0.88rem' }}>
                       Verification channel idle. Initiate parsing pipeline to isolate ledger targets.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      
                       <div style={{ background: '#f1f5f9', padding: '14px 18px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #e2e8f0' }}>
                         <div>
                           <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1e293b' }}>Multi-Entry Batch Target Map</div>
@@ -304,15 +349,12 @@ export default function Home() {
                       {extractedBatch.map((entry, idx) => (
                         <div key={idx} style={{ background: '#ffffff', padding: '20px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#0f172a', fontFamily: 'monospace' }}>{entry.id}</span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{entry.id}</span>
                             <span style={{ padding: '3px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '0.72rem', background: '#dcfce7', color: '#166534' }}>VALIDATED</span>
                           </div>
-                          
-                          <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '12px' }}>{entry.transactionType}</div>
-
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                             <thead>
-                              <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc', textTransform: 'uppercase', color: '#64748b' }}>
+                              <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b' }}>
                                 <th style={{ padding: '6px', textAlign: 'left' }}>Account</th>
                                 <th style={{ padding: '6px', textAlign: 'left' }}>Name Mapping</th>
                                 <th style={{ padding: '6px', textAlign: 'right' }}>Debit</th>
@@ -339,11 +381,9 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB VIEW 2: TRANSACTIONS - GENERAL LEDGER */}
+          {/* VIEW 2: TRANSACTIONS - GENERAL LEDGER */}
           {activeTab === 'ledger' && (
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
-              
-              {/* Action Toolbar Panel Top (NO INLINE TEXT BOX CHAOS) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1e293b' }}>Audit Journal Record Database</span>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -351,7 +391,7 @@ export default function Home() {
                     + Add Row Ledger
                   </button>
                   <button 
-                    onClick={executeDeleteSelectedGl}
+                    onClick={() => { if (selectedGlId) { const updated = journalEntries.filter(e => e.id !== selectedGlId); saveLedger(updated); setSelectedGlId(null); setIsEditingGl(false); } }}
                     disabled={!selectedGlId} 
                     style={{ padding: '8px 14px', background: selectedGlId ? '#ef4444' : '#cbd5e1', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: selectedGlId ? 'pointer' : 'not-allowed' }}
                   >
@@ -367,7 +407,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Controlled GL Data Layout Loop */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {journalEntries.map((entry) => {
                   const isTargeted = selectedGlId === entry.id;
@@ -375,14 +414,7 @@ export default function Home() {
                     <div 
                       key={entry.id} 
                       onClick={() => setSelectedGlId(entry.id)}
-                      style={{ 
-                        border: isTargeted ? '2px solid #2563eb' : '1px solid #e2e8f0', 
-                        borderRadius: '6px', 
-                        padding: '16px',
-                        cursor: 'pointer',
-                        background: isTargeted ? '#f8fafc' : '#ffffff',
-                        transition: 'all 0.15s ease'
-                      }}
+                      style={{ border: isTargeted ? '2px solid #2563eb' : '1px solid #e2e8f0', borderRadius: '6px', padding: '16px', cursor: 'pointer', background: isTargeted ? '#f8fafc' : '#ffffff' }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <div>
@@ -394,8 +426,7 @@ export default function Home() {
                         </div>
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#166534' }}>{entry.status}</span>
                       </div>
-                      
-                      <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '12px', fontWeight: 500 }}>{entry.type}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '12px' }}>{entry.type}</div>
 
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                         <thead>
@@ -426,34 +457,24 @@ export default function Home() {
                                 ) : line.accountCode}
                               </td>
                               <td style={{ padding: '10px 8px', color: '#475569' }}>{getCoaName(line.accountCode)}</td>
-                              <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 500 }}>
+                              <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                                 {isTargeted && isEditingGl ? (
-                                  <input 
-                                    type="number" 
-                                    value={line.debit}
-                                    onChange={(e) => {
-                                      let updated = [...journalEntries];
-                                      let targetIdx = updated.findIndex(ent => ent.id === entry.id);
-                                      updated[targetIdx].lines[lineIdx].debit = Number(e.target.value);
-                                      saveLedger(updated);
-                                    }}
-                                    style={{ width: '100px', textAlign: 'right', padding: '4px' }}
-                                  />
+                                  <input type="number" value={line.debit} onChange={(e) => {
+                                    let updated = [...journalEntries];
+                                    let targetIdx = updated.findIndex(ent => ent.id === entry.id);
+                                    updated[targetIdx].lines[lineIdx].debit = Number(e.target.value);
+                                    saveLedger(updated);
+                                  }} style={{ width: '100px', textAlign: 'right' }} />
                                 ) : (line.debit > 0 ? line.debit.toLocaleString() : '-')}
                               </td>
-                              <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 500 }}>
+                              <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                                 {isTargeted && isEditingGl ? (
-                                  <input 
-                                    type="number" 
-                                    value={line.credit}
-                                    onChange={(e) => {
-                                      let updated = [...journalEntries];
-                                      let targetIdx = updated.findIndex(ent => ent.id === entry.id);
-                                      updated[targetIdx].lines[lineIdx].credit = Number(e.target.value);
-                                      saveLedger(updated);
-                                    }}
-                                    style={{ width: '100px', textAlign: 'right', padding: '4px' }}
-                                  />
+                                  <input type="number" value={line.credit} onChange={(e) => {
+                                    let updated = [...journalEntries];
+                                    let targetIdx = updated.findIndex(ent => ent.id === entry.id);
+                                    updated[targetIdx].lines[lineIdx].credit = Number(e.target.value);
+                                    saveLedger(updated);
+                                  }} style={{ width: '100px', textAlign: 'right' }} />
                                 ) : (line.credit > 0 ? line.credit.toLocaleString() : '-')}
                               </td>
                             </tr>
@@ -467,63 +488,43 @@ export default function Home() {
             </div>
           )}
 
-          {/* TAB VIEW 3: ACCOUNTS MANAGER */}
+          {/* VIEW 3: ACCOUNTS MANAGER */}
           {activeTab === 'coa' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              
-              {/* Account Form Generation Buffer */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600 }}>Create New Account Track</h3>
                 <form onSubmit={handleAddAccount} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 2fr auto', gap: '12px', alignItems: 'end' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Code</label>
-                    <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="e.g. 1400" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} required />
+                    <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="e.g. 1400" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} required />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Account Title</label>
-                    <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g. Dividend Accrual Map" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} required />
+                    <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g. Dividend Clearing" style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} required />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Account Type</label>
-                    <select value={newType} onChange={e => setNewType(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem', background: '#ffffff' }}>
+                    <select value={newType} onChange={e => setNewType(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#ffffff' }}>
                       <option value="Asset">Asset</option>
                       <option value="Liability">Liability</option>
                       <option value="Equity">Equity</option>
-                      <option value="Revenue">Revenue</option>
                       <option value="Expense">Expense</option>
                     </select>
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Description</label>
-                    <input type="text" value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Purpose mapping details..." style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                    <input type="text" value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Purpose configurations..." style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                   </div>
-                  <button type="submit" style={{ padding: '9px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
-                    Save Account
-                  </button>
+                  <button type="submit" style={{ padding: '9px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer' }}>Save Account</button>
                 </form>
               </div>
 
-              {/* Main Directory & Horizon Balance Aggregation Panel */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>Chart of Accounts Matrix</span>
-                  
-                  {/* Balance Filters Toggle */}
                   <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
                     {(['MTD', 'QTD', 'YTD', 'ITD'] as const).map((horizon) => (
-                      <button
-                        key={horizon}
-                        onClick={() => setBalanceFilter(horizon)}
-                        style={{
-                          padding: '6px 14px',
-                          border: 'none',
-                          background: balanceFilter === horizon ? '#0f172a' : '#ffffff',
-                          color: balanceFilter === horizon ? '#ffffff' : '#475569',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                          cursor: 'pointer'
-                        }}
-                      >
+                      <button key={horizon} onClick={() => setBalanceFilter(horizon)} style={{ padding: '6px 14px', border: 'none', background: balanceFilter === horizon ? '#0f172a' : '#ffffff', color: balanceFilter === horizon ? '#ffffff' : '#475569', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
                         {horizon} Balance View
                       </button>
                     ))}
@@ -543,50 +544,20 @@ export default function Home() {
                   </thead>
                   <tbody>
                     {coa.map((account) => {
-                      // Dynamically pull correct currency profile property
                       const balance = account[balanceFilter.toLowerCase()] || 0;
-                      const isNegative = balance < 0;
-
                       return (
                         <tr key={account.code} style={{ borderBottom: '1px solid #e2e8f0' }}>
                           <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 700 }}>{account.code}</td>
                           <td style={{ padding: '12px 10px', fontWeight: 500 }}>{account.name}</td>
-                          <td style={{ padding: '12px 10px' }}>
-                            <span style={{ fontSize: '0.75rem', padding: '3px 8px', background: '#f1f5f9', borderRadius: '4px', fontWeight: 600, color: '#475569' }}>
-                              {account.category}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '0.82rem' }}>{account.description || 'No context specified'}</td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600, color: isNegative ? '#b91c1c' : '#1e293b' }}>
-                            {isNegative ? `-$${Math.abs(balance).toLocaleString('.2')}` : `$${balance.toLocaleString('.2')}`}
-                          </td>
-                          
-                          {/* Drops down cell row action panel */}
+                          <td style={{ padding: '12px 10px' }}><span style={{ fontSize: '0.75rem', padding: '3px 8px', background: '#f1f5f9', borderRadius: '4px', fontWeight: 600 }}>{account.category}</span></td>
+                          <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '0.82rem' }}>{account.description}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600, color: balance < 0 ? '#b91c1c' : '#1e293b' }}>${balance.toLocaleString('.2')}</td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', position: 'relative' }}>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveDropdown(activeDropdown === account.code ? null : account.code);
-                              }}
-                              style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
-                            >
-                              Options ▾
-                            </button>
-                            
+                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === account.code ? null : account.code); }} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer' }}>Options ▾</button>
                             {activeDropdown === account.code && (
-                              <div style={{ position: 'absolute', right: '10px', top: '40px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '120px' }}>
-                                <button 
-                                  onClick={() => alert(`Modify profile routing configurations for account: ${account.code}`)}
-                                  style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', cursor: 'pointer', color: '#334155' }}
-                                >
-                                  Modify/Edit
-                                </button>
-                                <button 
-                                  onClick={() => deleteAccount(account.code)}
-                                  style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', cursor: 'pointer', color: '#ef4444', borderTop: '1px solid #f1f5f9' }}
-                                >
-                                  Remove Account
-                                </button>
+                              <div style={{ position: 'absolute', right: '10px', top: '40px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '130px' }}>
+                                <button onClick={() => alert(`Modify profile: ${account.code}`)} style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', cursor: 'pointer' }}>Modify/Edit</button>
+                                <button onClick={() => deleteAccount(account.code)} style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', cursor: '#ef4444', color: '#ef4444', borderTop: '1px solid #f1f5f9' }}>Remove Account</button>
                               </div>
                             )}
                           </td>
@@ -596,7 +567,89 @@ export default function Home() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
 
+          {/* VIEW 4: FUNDS PARTNERSHIP DIRECTORY */}
+          {activeTab === 'registry' && (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600 }}>Partnership Node Registry Ledger</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
+                    <th style={{ padding: '10px' }}>Token Identifier ID</th>
+                    <th style={{ padding: '10px' }}>Legal Entity Name</th>
+                    <th style={{ padding: '10px' }}>Target Allocation Fund</th>
+                    <th style={{ padding: '10px' }}>Registry Class</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entities.map(ent => (
+                    <tr key={ent.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 600 }}>{ent.id}</td>
+                      <td style={{ padding: '12px 10px' }}>{ent.name}</td>
+                      <td style={{ padding: '12px 10px', color: '#475569' }}>{ent.targetFund}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 600 }}>{ent.type}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* VIEW 5: RECONCILIATION & MATCHING */}
+          {activeTab === 'recon' && (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600 }}>Active Internal vs External Matching Desk</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
+                    <th style={{ padding: '10px' }}>Sub-Ledger Map Class</th>
+                    <th style={{ padding: '10px' }}>Internal Book balance</th>
+                    <th style={{ padding: '10px' }}>External Statement Ledger</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Status Check</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reconData.map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '12px 10px', fontWeight: 600 }}>{r.type} (Acc: {r.accountCode})</td>
+                      <td style={{ padding: '12px 10px' }}>${r.internalAmount.toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px' }}>${r.externalAmount.toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'right', color: r.isMatched ? '#166534' : '#b91c1c', fontWeight: 700 }}>
+                        {r.isMatched ? 'MATCHED' : 'VARIANCE DETECTED'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* VIEW 6: REPORT DEPOSITORY VAULT */}
+          {activeTab === 'reports' && (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600 }}>Secure Generated Financial Reports Archive</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
+                    <th style={{ padding: '10px' }}>Reference Hash</th>
+                    <th style={{ padding: '10px' }}>File Destination Name</th>
+                    <th style={{ padding: '10px' }}>Framework Category</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Date Generated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.map(rep => (
+                    <tr key={rep.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '12px 10px', fontFamily: 'monospace', fontWeight: 600 }}>{rep.id}</td>
+                      <td style={{ padding: '12px 10px', color: '#2563eb' }}>{rep.name}.{rep.format.toLowerCase()}</td>
+                      <td style={{ padding: '12px 10px' }}>{rep.type}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'right', color: '#64748b' }}>{rep.date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
