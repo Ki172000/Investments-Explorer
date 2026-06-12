@@ -123,7 +123,6 @@ export default function Home() {
     return coa.find(a => a.code === code)?.name || 'Unmapped Sub-Ledger Account';
   };
 
-  // File Import Link Execution Pipe
   const handleNativeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,7 +136,6 @@ export default function Home() {
     fileReader.readAsText(file);
   };
 
-  // Parsing Verification Mechanism
   async function handleMultiEntryParse() {
     if (!inputText.trim()) return;
     setLoading(true);
@@ -227,7 +225,6 @@ export default function Home() {
     }
   };
 
-  // Group Entities By Specified Target Fund Asset Pools
   const uniqueFunds = Array.from(new Set(entities.map(e => e.targetFund)));
 
   const sidebarTabs = [
@@ -316,7 +313,6 @@ export default function Home() {
                   style={{ width: '100%', height: '340px', padding: '16px', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.6', resize: 'none', background: '#f8fafc', outline: 'none', color: '#334155' }}
                 />
                 
-                {/* MOVED IN ACCORDANCE WITH STRUCTURAL SPECIFICATIONS */}
                 <div style={{ marginTop: '16px', padding: '16px', background: '#f1f5f9', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>Source Data Object Attachment</span>
@@ -502,7 +498,6 @@ export default function Home() {
           {activeTab === 'coa' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               
-              {/* Account Generation Form */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '0.85rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Provision New Account Parameter</h3>
                 <form onSubmit={handleAddAccount} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.2fr 2fr auto', gap: '16px', alignItems: 'end' }}>
@@ -531,12 +526,10 @@ export default function Home() {
                 </form>
               </div>
 
-              {/* Data Table Matrix Desk */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                   <span style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Chart of Accounts Operational Balances</span>
                   
-                  {/* Fixed Navigation Balance Horizon Map Control Panels */}
                   <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
                     {(['MTD', 'QTD', 'YTD', 'ITD'] as const).map((horizon) => (
                       <button 
@@ -564,7 +557,6 @@ export default function Home() {
                   </thead>
                   <tbody>
                     {coa.map((account) => {
-                      // Safe structural extraction lookup pipeline parameters protection check
                       const filterKey = balanceFilter.toLowerCase();
                       const rawVal = account[filterKey];
                       const parsedBalance = typeof rawVal === 'number' ? rawVal : 0;
@@ -611,7 +603,8 @@ export default function Home() {
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Limited Partners (LPs)</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {entities.filter(e => e.targetFund === fundName && e.type === 'LP').map(ent => (
-                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyBetween: 'center', flexDirection: 'column' }}>
+                          {/* FIXED TYPO EXPLICITLY: changed justifyBetween to justifyContent */}
+                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
                             <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
                           </div>
@@ -624,7 +617,8 @@ export default function Home() {
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.03em' }}>General Partners (GPs)</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {entities.filter(e => e.targetFund === fundName && e.type === 'GP').map(ent => (
-                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyBetween: 'center', flexDirection: 'column' }}>
+                          {/* FIXED TYPO EXPLICITLY: changed justifyBetween to justifyContent */}
+                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
                             <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
                           </div>
@@ -637,7 +631,8 @@ export default function Home() {
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Affiliated Entities</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {entities.filter(e => e.targetFund === fundName && e.type === 'Affiliate').map(ent => (
-                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyBetween: 'center', flexDirection: 'column' }}>
+                          {/* FIXED TYPO EXPLICITLY: changed justifyBetween to justifyContent */}
+                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
                             <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
                           </div>
@@ -668,7 +663,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* SPREADSHEET RENDER ARCHITECTURE */}
               <div style={{ overflowX: 'auto', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left', background: '#ffffff' }}>
                   <thead>
