@@ -603,7 +603,6 @@ export default function Home() {
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Limited Partners (LPs)</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {entities.filter(e => e.targetFund === fundName && e.type === 'LP').map(ent => (
-                          {/* FIXED TYPO EXPLICITLY: changed justifyBetween to justifyContent */}
                           <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
                             <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
@@ -617,7 +616,6 @@ export default function Home() {
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.03em' }}>General Partners (GPs)</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {entities.filter(e => e.targetFund === fundName && e.type === 'GP').map(ent => (
-                          {/* FIXED TYPO EXPLICITLY: changed justifyBetween to justifyContent */}
                           <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
                             <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
@@ -631,7 +629,6 @@ export default function Home() {
                       <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Affiliated Entities</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {entities.filter(e => e.targetFund === fundName && e.type === 'Affiliate').map(ent => (
-                          {/* FIXED TYPO EXPLICITLY: changed justifyBetween to justifyContent */}
                           <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
                             <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
@@ -671,7 +668,7 @@ export default function Home() {
                         <input type="checkbox" checked={selectedReconRows.length === reconData.length} onChange={() => { if(selectedReconRows.length === reconData.length) { setSelectedReconRows([]); } else { setSelectedReconRows(reconData.map(r => r.id)); } }} />
                       </th>
                       <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Account Code</th>
-                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Sub-Ledger Operational Class</th>
+                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: '#334155' }}>Sub-Ledger Operational Class</th>
                       <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Internal Book Amount (USD)</th>
                       <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>External Statement Ledger (USD)</th>
                       <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Unreconciled Variance (USD)</th>
