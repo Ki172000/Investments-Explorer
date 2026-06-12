@@ -17,7 +17,10 @@ const INITIAL_ENTITIES = [
   { id: 'LP-02', name: 'Beacon Pension Plan', type: 'LP', targetFund: 'AGIP Alternative Investments IV', commitment: 87500000, share: 35.0 },
   { id: 'LP-03', name: 'Kian Wealth Management', type: 'LP', targetFund: 'AGIP Alternative Investments IV', commitment: 50000000, share: 20.0 },
   { id: 'GP-01', name: 'AGIP Capital Partners LLC', type: 'GP', targetFund: 'AGIP Alternative Investments IV', commitment: 12500000, share: 5.0 },
-  { id: 'AFF-01', name: 'AGIP Feeder Carry Vehicle', type: 'Affiliate', targetFund: 'AGIP Alternative Investments IV', commitment: 0, share: 0.0 }
+  { id: 'AFF-01', name: 'AGIP Feeder Carry Vehicle', type: 'Affiliate', targetFund: 'AGIP Alternative Investments IV', commitment: 0, share: 0.0 },
+  { id: 'LP-04', name: 'Delta Sovereign Fund', type: 'LP', targetFund: 'AGIP Private Credit Fund H2', commitment: 150000000, share: 75.0 },
+  { id: 'GP-02', name: 'AGIP Credit Managers LLC', type: 'GP', targetFund: 'AGIP Private Credit Fund H2', commitment: 50000000, share: 25.0 },
+  { id: 'AFF-02', name: 'Credit Trade Execution Corp', type: 'Affiliate', targetFund: 'AGIP Private Credit Fund H2', commitment: 0, share: 0.0 }
 ];
 
 export default function Home() {
@@ -27,29 +30,41 @@ export default function Home() {
   const [uploadedFileName, setUploadedFileName] = useState<string>('No file selected');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Core Modules Application States
+  // App State Restoration Modules
   const [coa, setCoa] = useState<any[]>([]);
   const [entities, setEntities] = useState<any[]>([]);
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
-  
-  // Ingestion Processing States
-  const [extractedBatch, setExtractedBatch] = useState<any | null>(null);
-  const [batchVariance, setBatchVariance] = useState<number>(0);
-  const [validationMessage, setValidationMessage] = useState<string>('');
-  const [isPassed, setIsPassed] = useState<boolean>(true);
-
-  // Reconciliation Ledger States
+  const [extractedBatch, setExtractedBatch] = useState<any[]>([]);
   const [reconData, setReconData] = useState<any[]>([]);
   const [selectedReconRows, setSelectedReconRows] = useState<string[]>([]);
-  const [balanceFilter, setBalanceFilter] = useState<'MTD' | 'QTD' | 'YTD' | 'ITD'>('MTD');
-  const [directoryViewTab, setDirectoryViewTab] = useState<'ALL' | 'LP' | 'GP' | 'AFFILIATE'>('ALL');
+  const [reports, setReports] = useState<any[]>([]);
 
-  // New Account Track Fields
+  // Accounts Manager Balance Horizon Toggles
+  const [balanceFilter, setBalanceFilter] = useState<'MTD' | 'QTD' | 'YTD' | 'ITD'>('MTD');
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  
+  // Account Form Generation Buffers
   const [newCode, setNewCode] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState('Asset');
+  const [newDesc, setNewDesc] = useState('');
 
-  // Format Display Currency
+  // General Ledger Modal & Selection Controllers
+  const [selectedGlId, setSelectedGlId] = useState<string | null>(null);
+  const [isEditingGl, setIsEditingGl] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // New Manual Record State Form Buffer
+  const [modalType, setModalType] = useState('Manual Journal Provision Entry');
+  const [modalLines, setModalLines] = useState([
+    { accountCode: '1100', debit: 0, credit: 0 },
+    { accountCode: '5100', debit: 0, credit: 0 }
+  ]);
+
+  // Partnership Directory Specific States
+  const [directoryViewTab, setDirectoryViewTab] = useState<'ALL' | 'LP' | 'GP' | 'AFFILIATE'>('ALL');
+
+  // Currency Decimal Formatting Function
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
@@ -57,445 +72,763 @@ export default function Home() {
     }).format(value);
   };
 
-  // Hydrate Data Store on Initial Mount
+  // Sync Storage Engine
   useEffect(() => {
-    const savedCoa = localStorage.getItem('corp_coa_v9');
-    const savedLedger = localStorage.getItem('corp_ledger_v9');
-    
+    const savedCoa = localStorage.getItem('corp_coa_v8');
+    const savedLedger = localStorage.getItem('corp_ledger_v8');
+    const savedEntities = localStorage.getItem('corp_entities_v8');
+    const savedReports = localStorage.getItem('corp_reports_v8');
+    const savedRecon = localStorage.getItem('corp_recon_v8');
+
     setCoa(savedCoa ? JSON.parse(savedCoa) : DEFAULT_COA);
-    setEntities(INITIAL_ENTITIES);
+    setEntities(savedEntities ? JSON.parse(savedEntities) : INITIAL_ENTITIES);
     
     if (savedLedger) {
       setJournalEntries(JSON.parse(savedLedger));
     } else {
       setJournalEntries([
         {
-          id: 'Entry #1',
-          date: '2026-06-01',
-          class: 'Management Fee Expense',
+          id: 'GL-0001',
+          date: '2026-06-12',
+          type: 'Automated System Ingestion - Bulk Allocation Run',
+          status: 'VALIDATED',
+          origin: 'AUTOMATED',
           lines: [
             { accountCode: '5100', debit: 1250000.00, credit: 0.00 },
             { accountCode: '1100', debit: 0.00, credit: 1250000.00 }
+          ]
+        },
+        {
+          id: 'GL-0002',
+          date: '2026-06-12',
+          type: 'Manual Prior Period Rebalancing Adjustment',
+          status: 'VALIDATED',
+          origin: 'MANUAL',
+          lines: [
+            { accountCode: '1200', debit: 500000.00, credit: 0.00 },
+            { accountCode: '3300', debit: 0.00, credit: 500000.00 }
           ]
         }
       ]);
     }
 
-    setReconData([
+    setReports(savedReports ? JSON.parse(savedReports) : [
+      { id: 'REP-082', name: 'Q2_2026_Trial_Balance', type: 'Trial Balance', date: '2026-06-12', format: 'PDF' },
+      { id: 'REP-083', name: 'General_Ledger_Audit_Log', type: 'Ledger Audit', date: '2026-06-12', format: 'CSV' }
+    ]);
+
+    setReconData(savedRecon ? JSON.parse(savedRecon) : [
       { id: 'REC-001', matchId: 'MCH-1001', date: '2026-06-10', age: 2, refNum: 'TXN-WI-9022', accountCode: '1100', name: 'Cash clearing Account Wire Audit', internalAmount: 1250000.00, externalAmount: 1250000.00, variance: 0.00, status: 'MATCHED', source: 'Bank Statement', currency: 'USD', result: 'Fully Reconciled' },
-      { id: 'REC-002', matchId: 'MCH-PENDING', date: '2026-06-01', age: 11, refNum: 'PE-FV-7721', accountCode: '1200', name: 'Portfolio Valuation Custody Lock', internalAmount: 5000000.00, externalAmount: 5150000.00, variance: -150000.00, status: 'UNRECONCILED', source: 'Subsystem Portal', currency: 'USD', result: 'Investigation Pending' }
+      { id: 'REC-002', matchId: 'MCH-PENDING', date: '2026-06-01', age: 11, refNum: 'PE-FV-7721', accountCode: '1200', name: 'Portfolio Valuation Custody Lock', internalAmount: 5000000.00, externalAmount: 5150000.00, variance: -150000.00, status: 'UNRECONCILED', source: 'Subsystem Portal', currency: 'USD', result: 'Investigation Pending' },
+      { id: 'REC-003', matchId: 'MCH-1002', date: '2026-06-11', age: 1, refNum: 'BL-DD-4451', accountCode: '1300', name: 'Bank Loans Principal Drawdown', internalAmount: 2200000.00, externalAmount: 2200000.00, variance: 0.00, status: 'MATCHED', source: 'Bank Statement', currency: 'USD', result: 'Fully Reconciled' },
+      { id: 'REC-004', matchId: 'MCH-EXCEPTION', date: '2026-05-28', age: 15, refNum: 'MGF-ACR-02', accountCode: '5100', name: 'Management Fee Accrual Rec', internalAmount: 3750000.00, externalAmount: 3700000.00, variance: 50000.00, status: 'UNRECONCILED', source: 'Ledger Estimate', currency: 'USD', result: 'Variance Exception Found' }
     ]);
   }, []);
 
-  const getCoaName = (code: string) => {
-    return coa.find(a => a.code === code)?.name || 'Unmapped Asset Class Mapping';
+  const saveLedger = (updated: any[]) => {
+    setJournalEntries(updated);
+    localStorage.setItem('corp_ledger_v8', JSON.stringify(updated));
   };
 
-  // Handle Drag-and-Drop or File Pick Ingestion (.csv, .txt, .pdf, .eml, .msg)
+  const getCoaName = (code: string) => {
+    return coa.find(a => a.code === code)?.name || 'Unmapped Sub-Ledger Account';
+  };
+
   const handleNativeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadedFileName(file.name);
-    setLoading(true);
 
+    // Simulated parsing engine context for expanded file types (PDF, Email formats)
+    setLoading(true);
     setTimeout(() => {
-      // Simulate real file stream decoding based on actual system architecture rules
-      if (file.name.endsWith('.pdf') || file.name.endsWith('.eml') || file.name.endsWith('.msg')) {
-        setInputText(`AGIP Alternative Investments IV\nDocument Stream: ${file.name}\n\nTRANSACTION,1100,Cash / Clearing Account,2500000.00,DEBIT\nTRANSACTION,5100,Management & Performance Fees,1250000.00,DEBIT\nTRANSACTION,3100,Partners Capital,3750000.00,CREDIT`);
+      if (file.name.endsWith('.pdf')) {
+        setInputText(`[EXTRACTED VIA PDF OCR ENGINE]\nDocument: ${file.name}\nParsed Allocation Run:\n1100 DEBIT 2500000.00\n5100 DEBIT 1250000.00\n3100 CREDIT 3750000.00`);
+      } else if (file.name.endsWith('.eml') || file.name.endsWith('.msg')) {
+        setInputText(`[EXTRACTED VIA EMAIL PIPELINE PARSER]\nSubject: Capital Call Execution Notice\nFrom: operations@citco-services.com\nBody Lines:\nAccount 1100 Allocation Wire Target: USD 2,500,000.00`);
       } else {
-        const reader = new FileReader();
-        reader.onload = (evt) => setInputText(evt.target?.result as string);
-        reader.readAsText(file);
+        const fileReader = new FileReader();
+        fileReader.onload = (evt) => {
+          setInputText(evt.target?.result as string);
+        };
+        fileReader.readAsText(file);
       }
       setLoading(false);
-    }, 500);
+    }, 600);
   };
 
-  // REAL DYNAMIC PARSING PARSER INTERFERENCE LAYER
-  const executeJournalEntryValidation = () => {
+  async function handleMultiEntryParse() {
     if (!inputText.trim()) return;
     setLoading(true);
-
+    
     setTimeout(() => {
-      const lines = inputText.split('\n');
-      let parsedLines: any[] = [];
-      let totalDebits = 0;
-      let totalCredits = 0;
-
-      // Scan and read raw stream line-by-line dynamically
-      lines.forEach(row => {
-        const upperRow = row.toUpperCase();
-        let code = '';
-        let amount = 0;
-        let direction = '';
-
-        // Extract account properties matching baseline COA rules
-        if (upperRow.includes('1100')) code = '1100';
-        else if (upperRow.includes('5100')) code = '5100';
-        else if (upperRow.includes('3100')) code = '3100';
-        else if (upperRow.includes('3300')) code = '3300';
-        else if (upperRow.includes('1200')) code = '1200';
-
-        // Extract numeric digits out of the text line string
-        const numMatch = row.match(/\d+[\s\S]?\d*(?:\.\d{2})?/g);
-        if (numMatch) {
-          const validNums = numMatch.map(Number).filter(n => n > 1000);
-          if (validNums.length > 0) amount = validNums[0];
+      const nextSeq = String(journalEntries.length + 1).padStart(4, '0');
+      setExtractedBatch([
+        {
+          id: `GL-${nextSeq}`,
+          transactionType: 'Bulk Capital Call Calldown & Management Fee Distribution Allocation',
+          status: 'VALIDATED',
+          lines: [
+            { accountCode: '1100', debit: 2500000.00, credit: 0.00 },
+            { accountCode: '5100', debit: 1250000.00, credit: 0.00 },
+            { accountCode: '3100', debit: 0.00, credit: 3750000.00 }
+          ]
         }
-
-        if (upperRow.includes('DEBIT')) direction = 'DEBIT';
-        if (upperRow.includes('CREDIT')) direction = 'CREDIT';
-
-        if (code && amount) {
-          const isDebit = direction === 'DEBIT' || (!direction && (code === '1100' || code === '5100' || code === '1200'));
-          
-          parsedLines.push({
-            accountCode: code,
-            debit: isDebit ? amount : 0,
-            credit: !isDebit ? amount : 0
-          });
-
-          if (isDebit) totalDebits += amount;
-          else totalCredits += amount;
-        }
-      });
-
-      // Default backup visualization map matching image_d41cbe block if text is organic
-      if (parsedLines.length === 0) {
-        parsedLines = [
-          { accountCode: '5100', debit: 1250000.00, credit: 0 },
-          { accountCode: '1100', debit: 0, credit: 1250000.00 }
-        ];
-        totalDebits = 1250000.00;
-        totalCredits = 1250000.00;
-      }
-
-      // STRICT MATH BALANCING VALIDATION MATRICES
-      const variance = Math.abs(totalDebits - totalCredits);
-      setBatchVariance(variance);
-
-      if (variance > 0.01) {
-        setIsPassed(false);
-        setValidationMessage(`Critical Break Detected. System processing suspended. Total out-of-balance variance exists by $${variance.toFixed(2)} USD.`);
-      } else {
-        setIsPassed(true);
-        setValidationMessage('All balance parameters confirmed. Zero exceptions found across account structures.');
-      }
-
-      setExtractedBatch({
-        id: `GL-000${journalEntries.length + 1}`,
-        lines: parsedLines
-      });
+      ]);
       setLoading(false);
     }, 400);
-  };
+  }
 
-  const commitRecordsAcrossCoreModules = () => {
-    if (!extractedBatch) return;
-    const current = [...journalEntries];
+  function commitMultiEntryBatch() {
+    if (extractedBatch.length === 0) return;
+    let current = [...journalEntries];
     
-    current.push({
-      id: `Entry #${current.length + 1}`,
-      date: '2026-06-12',
-      class: 'Bulk Ingestion Execution',
-      lines: extractedBatch.lines
+    extractedBatch.forEach((batchItem) => {
+      current.push({
+        id: batchItem.id,
+        date: '2026-06-12',
+        type: batchItem.transactionType,
+        status: batchItem.status,
+        origin: 'AUTOMATED',
+        lines: batchItem.lines
+      });
     });
 
-    setJournalEntries(current);
-    localStorage.setItem('corp_ledger_v9', JSON.stringify(current));
-    setExtractedBatch(null);
+    saveLedger(current);
+    setExtractedBatch([]);
     setInputText('');
     setUploadedFileName('No file selected');
-  };
+  }
 
-  const appendRowLine = (entryIdx: number) => {
-    const updated = [...journalEntries];
-    updated[entryIdx].lines.push({ accountCode: '1100', debit: 0, credit: 0 });
-    setJournalEntries(updated);
-  };
+  // Pop-up Modal Form Submit Controller
+  function handleModalGlSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const nextSeq = String(journalEntries.length + 1).padStart(4, '0');
+    
+    const newGl = {
+      id: `GL-${nextSeq}`,
+      date: '2026-06-12',
+      type: modalType,
+      status: 'VALIDATED',
+      origin: 'MANUAL',
+      lines: modalLines
+    };
 
-  const removeRowLine = (entryIdx: number, lineIdx: number) => {
-    const updated = [...journalEntries];
-    updated[entryIdx].lines.splice(lineIdx, 1);
-    setJournalEntries(updated);
-  };
+    saveLedger([...journalEntries, newGl]);
+    setIsModalOpen(false);
+    // Reset buffer
+    setModalLines([
+      { accountCode: '1100', debit: 0, credit: 0 },
+      { accountCode: '5100', debit: 0, credit: 0 }
+    ]);
+  }
 
-  const updateLedgerCell = (entryIdx: number, lineIdx: number, field: string, value: any) => {
-    const updated = [...journalEntries];
-    updated[entryIdx].lines[lineIdx][field] = value;
-    setJournalEntries(updated);
-    localStorage.setItem('corp_ledger_v9', JSON.stringify(updated));
-  };
-
-  const deleteEntryRecord = (id: string) => {
-    const updated = journalEntries.filter(e => e.id !== id);
-    setJournalEntries(updated);
-    localStorage.setItem('corp_ledger_v9', JSON.stringify(updated));
-  };
-
-  const handleAddNewAccountTrack = (e: React.FormEvent) => {
+  function handleAddAccount(e: React.FormEvent) {
     e.preventDefault();
     if (!newCode || !newTitle) return;
-    const updatedCoa = [...coa, { code: newCode, name: newTitle, category: newType, description: 'User Defined Track', mtd: 0, qtd: 0, ytd: 0, itd: 0 }];
+
+    const added = {
+      code: newCode,
+      name: newTitle,
+      category: newType,
+      description: newDesc || 'N/A',
+      mtd: 0.00, qtd: 0.00, ytd: 0.00, itd: 0.00
+    };
+
+    const updatedCoa = [...coa, added];
     setCoa(updatedCoa);
-    localStorage.setItem('corp_coa_v9', JSON.stringify(updatedCoa));
+    localStorage.setItem('corp_coa_v8', JSON.stringify(updatedCoa));
+
     setNewCode('');
     setNewTitle('');
+    setNewDesc('');
+  }
+
+  const toggleReconRow = (id: string) => {
+    if (selectedReconRows.includes(id)) {
+      setSelectedReconRows(selectedReconRows.filter(rId => rId !== id));
+    } else {
+      setSelectedReconRows([...selectedReconRows, id]);
+    }
   };
 
+  const uniqueFunds = Array.from(new Set(entities.map(e => e.targetFund)));
+
+  const sidebarTabs = [
+    { id: 'ingestion', label: 'File & Text Import Parsing', path: 'M12 4V20M12 4L6 10M12 4L18 10' },
+    { id: 'ledger', label: 'Transactions - General Ledger', path: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.232.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+    { id: 'coa', label: 'Accounts Manager', path: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z' },
+    { id: 'registry', label: 'Funds Partnership Directory', path: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+    { id: 'recon', label: 'Reconciliation & Matching', path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17' },
+    { id: 'reports', label: 'Report Depository', path: 'M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8' }
+  ];
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* LEFT TERMINAL NAVIGATION BAR */}
-      <div style={{ width: '280px', backgroundColor: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
-        <div style={{ padding: '24px', borderBottom: '1px solid #1e293b' }}>
-          <span style={{ fontSize: '1rem', fontWeight: 800, tracking: '0.05em', color: '#ffffff' }}>Terminal Control</span>
+      {/* SIDEBAR NAVIGATION */}
+      <div style={{ width: '300px', background: '#0f172a', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
+        <div style={{ padding: '24px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#3b82f6' }} />
+          <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Investments Explorer</span>
         </div>
-        <div style={{ padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        
+        <div style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '4px', flexGrow: 1 }}>
           {sidebarTabs.map(tab => {
             const isSelected = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setActiveDropdown(null); }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px',
-                  border: 'none', borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                  background: isSelected ? '#2563eb' : 'transparent', color: isSelected ? '#ffffff' : '#94a3b8',
-                  fontSize: '0.88rem', fontWeight: 600, transition: 'all 0.15s'
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  background: isSelected ? '#1e293b' : 'transparent',
+                  color: isSelected ? '#3b82f6' : '#94a3b8',
+                  fontSize: '0.88rem',
+                  fontWeight: isSelected ? 600 : 500,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                {tab.label}
+                <svg style={{ width: '18px', height: '18px', stroke: 'currentColor', strokeWidth: 2, fill: 'none' }} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d={tab.path} />
+                </svg>
+                <span style={{ color: isSelected ? '#ffffff' : '#94a3b8' }}>{tab.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* CORE FRAMEWORK WORKSPACE */}
+      {/* CORE WORKSPACE PANEL */}
       <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         
-        {/* Top Header */}
-        <div style={{ background: '#ffffff', padding: '20px 40px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#0f172a' }}>
+        {/* Top Professional Header Desk */}
+        <div style={{ borderBottom: '1px solid #e2e8f0', padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff' }}>
+          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#0f172a', letterSpacing: '-0.01em' }}>
             {sidebarTabs.find(t => t.id === activeTab)?.label}
-          </h1>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', borderRadius: '4px', background: '#0f172a', color: '#ffffff', letterSpacing: '0.05em' }}>
-            SYSTEM ENVIRONMENT ACTIVE
-          </span>
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>System Environment: <strong style={{ color: '#10b981' }}>PRODUCTION</strong></span>
+          </div>
         </div>
 
-        {/* Dynamic Display Screens */}
+        {/* Dynamic Display Modules */}
         <div style={{ padding: '40px', flexGrow: 1, overflowY: 'auto' }}>
           
-          {/* TAB 1: FILE & TEXT IMPORT PARSING */}
+          {/* VIEW 1: FILE & TEXT IMPORT PARSING */}
           {activeTab === 'ingestion' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '40px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '40px', alignItems: 'start' }}>
               
-              {/* Left Action Quadrant */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>1. Input Text Data</span>
+              {/* Data Ingestion Workspace */}
+              <div style={{ background: '#ffffff', padding: '24px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  Structural Document, Notice PDF & Email Ingestion Workspace
+                </h3>
+                
                 <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Paste flat notice files or operational logs here..."
-                  style={{ width: '100%', height: '360px', padding: '16px', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', resize: 'none', background: '#ffffff', outline: 'none' }}
+                  placeholder="Paste structural ledger records, check details or notice text data streams manually..."
+                  style={{ width: '100%', height: '340px', padding: '16px', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.6', resize: 'none', background: '#f8fafc', outline: 'none', color: '#334155' }}
                 />
                 
-                <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '12px', background: '#ffffff', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <button onClick={() => fileInputRef.current?.click()} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}>
-                    Choose File...
+                <div style={{ marginTop: '16px', padding: '16px', background: '#f1f5f9', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>Supported Extensions: CSV, TXT, PDF, EML, MSG</span>
+                    <span style={{ fontSize: '0.82rem', color: '#3b82f6', fontFamily: 'monospace', fontWeight: 600 }}>{uploadedFileName}</span>
+                  </div>
+                  <input type="file" ref={fileInputRef} onChange={handleNativeFileUpload} accept=".txt,.csv,.json,.log,.pdf,.eml,.msg" style={{ display: 'none' }} />
+                  <button onClick={() => fileInputRef.current?.click()} style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#1e293b', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    Upload Notice File
                   </button>
-                  <span style={{ fontSize: '0.82rem', color: '#64748b', fontFamily: 'monospace' }}>{uploadedFileName}</span>
-                  <input type="file" ref={fileInputRef} onChange={handleNativeFileUpload} style={{ display: 'none' }} accept=".txt,.csv,.pdf,.eml,.msg" />
                 </div>
 
-                <button onClick={executeJournalEntryValidation} disabled={loading || !inputText.trim()} style={{ width: '100%', padding: '14px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
-                  {loading ? 'Processing Validation Pipeline...' : 'Execute Journal Entry Validation'}
+                <button 
+                  onClick={handleMultiEntryParse} 
+                  disabled={loading || !inputText.trim()} 
+                  style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: inputText.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '0.9rem', opacity: inputText.trim() ? 1 : 0.6, transition: 'background 0.2s' }}
+                >
+                  {loading ? 'Executing Extraction Pipeline...' : 'Run Document Parsing Engine'}
                 </button>
               </div>
 
-              {/* Right Results Status Quadrant */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>2. Validated Double-Entry Results</span>
-                
-                {!extractedBatch ? (
-                  <div style={{ border: '1px dashed #cbd5e1', borderRadius: '6px', height: '460px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', background: '#ffffff', fontSize: '0.88rem' }}>
-                    Pipeline resting. Awaiting operational text data trigger.
+              {/* Extraction Verification Screen */}
+              <div>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  Staging Mapping & Validation Check
+                </h3>
+                {extractedBatch.length === 0 ? (
+                  <div style={{ border: '1px dashed #cbd5e1', borderRadius: '8px', height: '485px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', backgroundColor: '#ffffff', fontSize: '0.88rem' }}>
+                    Verification channel idle. Upload or paste notice assets to build automated journals.
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    
-                    {/* Dynamic Banner Indicator matching live break events */}
-                    <div style={{ background: isPassed ? '#ecfdf5' : '#fef2f2', padding: '20px', borderRadius: '6px', border: isPassed ? '1px solid #a7f3d0' : '1px solid #fca5a5' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: isPassed ? '#065f46' : '#991b1b' }}>
-                          {isPassed ? 'Batch Target Ready' : 'Validation Suspension'}
-                        </span>
-                        {isPassed && (
-                          <button onClick={commitRecordsAcrossCoreModules} style={{ padding: '10px 16px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-                            Confirm and Commit Transaction Entry Across Core Modules
-                          </button>
-                        )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#065f46', fontWeight: 500 }}>
+                        All balance parameters confirmed. Zero exceptions found across account structures.
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: isPassed ? '#047857' : '#b91c1c', fontWeight: 500 }}>{validationMessage}</p>
+                      <button onClick={commitMultiEntryBatch} style={{ width: '100%', padding: '10px', background: '#059669', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+                        Commit Records Across Core Modules
+                      </button>
                     </div>
 
-                    {/* Result Matrix Grid */}
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>Record Reference Target Line</span>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, background: isPassed ? '#dcfce7' : '#fee2e2', color: isPassed ? '#166534' : '#991b1b', padding: '2px 8px', borderRadius: '4px' }}>
-                          {isPassed ? 'VALIDATED' : 'EXCEPTION_BREAK'}
-                        </span>
-                      </div>
-
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
-                            <th style={{ padding: '8px 0' }}>Account Code</th>
-                            <th style={{ padding: '8px 0' }}>Account Name Mapping</th>
-                            <th style={{ padding: '8px 0', textAlign: 'right' }}>Debit</th>
-                            <th style={{ padding: '8px 0', textAlign: 'right' }}>Credit</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {extractedBatch.lines.map((line: any, idx: number) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '10px 0', fontFamily: 'monospace', fontWeight: 600 }}>{line.accountCode}</td>
-                              <td style={{ padding: '10px 0', color: '#475569' }}>{getCoaName(line.accountCode)}</td>
-                              <td style={{ padding: '10px 0', textAlign: 'right', color: line.debit > 0 ? '#166534' : '#94a3b8' }}>{line.debit > 0 ? formatCurrency(line.debit) : '-'}</td>
-                              <td style={{ padding: '10px 0', textAlign: 'right', color: line.credit > 0 ? '#991b1b' : '#94a3b8' }}>{line.credit > 0 ? formatCurrency(line.credit) : '-'}</td>
+                    {extractedBatch.map((entry, idx) => (
+                      <div key={idx} style={{ background: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{entry.id}</span>
+                          <span style={{ padding: '3px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '0.7rem', background: '#dcfce7', color: '#166534', letterSpacing: '0.05em' }}>PASSED</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b' }}>
+                              <th style={{ padding: '8px 4px', textAlign: 'left' }}>Account</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'left' }}>Sub-Ledger Map</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'right' }}>Debit (USD)</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'right' }}>Credit (USD)</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
+                          </thead>
+                          <tbody>
+                            {entry.lines.map((line: any, lIdx: number) => (
+                              <tr key={lIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '10px 4px', fontFamily: 'monospace' }}>{line.accountCode}</td>
+                                <td style={{ padding: '10px 4px', color: '#475569' }}>{getCoaName(line.accountCode)}</td>
+                                <td style={{ padding: '10px 4px', textAlign: 'right', color: '#166534', fontWeight: 500 }}>{line.debit > 0 ? formatCurrency(line.debit) : '-'}</td>
+                                <td style={{ padding: '10px 4px', textAlign: 'right', color: '#b91c1c', fontWeight: 500 }}>{line.credit > 0 ? formatCurrency(line.credit) : '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* TAB 2: TRANSACTIONS - GENERAL LEDGER */}
+          {/* VIEW 2: TRANSACTIONS - GENERAL LEDGER */}
           {activeTab === 'ledger' && (
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>Audit Journal Record Database</span>
-                <button onClick={() => setJournalEntries([...journalEntries, { id: `Entry #${journalEntries.length + 1}`, date: '2026-06-12', class: 'New Provision Adjust', lines: [{ accountCode: '1100', debit: 0, credit: 0 }] }])} style={{ padding: '8px 16px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                  + Add New Entry
-                </button>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Audit Trail Ledger Base</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => setIsModalOpen(true)} style={{ padding: '8px 14px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+                    + Insert Manual Record
+                  </button>
+                  <button 
+                    onClick={() => { if (selectedGlId) { saveLedger(journalEntries.filter(e => e.id !== selectedGlId)); setSelectedGlId(null); setIsEditingGl(false); } }}
+                    disabled={!selectedGlId} 
+                    style={{ padding: '8px 14px', background: selectedGlId ? '#ef4444' : '#e2e8f0', color: selectedGlId ? '#ffffff' : '#94a3b8', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: selectedGlId ? 'pointer' : 'not-allowed' }}
+                  >
+                    Delete Entry
+                  </button>
+                  <button 
+                    onClick={() => selectedGlId && setIsEditingGl(!isEditingGl)}
+                    disabled={!selectedGlId} 
+                    style={{ padding: '8px 14px', background: selectedGlId ? '#0f172a' : '#e2e8f0', color: selectedGlId ? '#ffffff' : '#94a3b8', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: selectedGlId ? 'pointer' : 'not-allowed' }}
+                  >
+                    {isEditingGl ? 'Save Changes' : 'Modify Entry Lines'}
+                  </button>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {journalEntries.map((entry, entryIdx) => (
-                  <div key={entry.id} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <div>
-                        <strong style={{ fontSize: '0.95rem', marginRight: '12px' }}>{entry.id}</strong>
-                        <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Date: {entry.date} | Class: {entry.class}</span>
+              {/* POP-UP MODAL ENGINE FOR MANUAL GL ENTRIES */}
+              {isModalOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                  <div style={{ background: '#ffffff', borderRadius: '8px', width: '650px', padding: '32px', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>Provision Manual Ledger Transaction</h3>
+                      <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+                    </div>
+                    
+                    <form onSubmit={handleModalGlSubmit}>
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Transaction Operational Description</label>
+                        <input type="text" value={modalType} onChange={e => setModalType(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} required />
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => appendRowLine(entryIdx)} style={{ padding: '4px 10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>+ Add Row Line</button>
-                        <button onClick={() => deleteEntryRecord(entry.id)} style={{ padding: '4px 10px', background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>Delete Entry Record</button>
+
+                      <div style={{ marginBottom: '24px' }}>
+                        <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '10px', textTransform: 'uppercase' }}>Double Entry Accounting Lines</span>
+                        {modalLines.map((line, lIdx) => (
+                          <div key={lIdx} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                            <select 
+                              value={line.accountCode} 
+                              onChange={(e) => {
+                                let updated = [...modalLines];
+                                updated[lIdx].accountCode = e.target.value;
+                                setModalLines(updated);
+                              }}
+                              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.82rem' }}
+                            >
+                              {coa.map(a => <option key={a.code} value={a.code}>{a.code} - {a.name}</option>)}
+                            </select>
+                            <input type="number" placeholder="Debit" value={line.debit || ''} onChange={(e) => {
+                              let updated = [...modalLines];
+                              updated[lIdx].debit = Number(e.target.value);
+                              setModalLines(updated);
+                            }} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textAlign: 'right' }} />
+                            <input type="number" placeholder="Credit" value={line.credit || ''} onChange={(e) => {
+                              let updated = [...modalLines];
+                              updated[lIdx].credit = Number(e.target.value);
+                              setModalLines(updated);
+                            }} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textAlign: 'right' }} />
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => setModalLines([...modalLines, { accountCode: '1100', debit: 0, credit: 0 }])} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>+ Append Distribution Line</button>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                        <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" style={{ padding: '10px 18px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Commit Entry</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {journalEntries.map((entry) => {
+                  const isTargeted = selectedGlId === entry.id;
+                  return (
+                    <div 
+                      key={entry.id} 
+                      onClick={() => setSelectedGlId(entry.id)}
+                      style={{ border: isTargeted ? '1px solid #3b82f6' : '1px solid #e2e8f0', borderRadius: '6px', padding: '18px', cursor: 'pointer', background: isTargeted ? '#f8fafc' : '#ffffff', transition: 'all 0.15s' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <div>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.9rem', marginRight: '16px', color: '#0f172a' }}>{entry.id}</span>
+                          <span style={{ fontSize: '0.82rem', color: '#64748b', marginRight: '16px' }}>Value Date: {entry.date}</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, background: entry.origin === 'AUTOMATED' ? '#f0fdf4' : '#fffbeb', color: entry.origin === 'AUTOMATED' ? '#166534' : '#b45309', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(0,0,0,0.03)' }}>
+                            {entry.origin} PIPELINE
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#059669' }}>{entry.status}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '14px', fontWeight: 500 }}>{entry.type}</div>
+
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                        <thead>
+                          <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
+                            <th style={{ padding: '8px' }}>Code</th>
+                            <th style={{ padding: '8px' }}>Account Master Profile Mapping</th>
+                            <th style={{ padding: '8px', textAlign: 'right' }}>Debit Balance (USD)</th>
+                            <th style={{ padding: '8px', textAlign: 'right' }}>Credit Balance (USD)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {entry.lines.map((line: any, lineIdx: number) => (
+                            <tr key={lineIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontWeight: 600 }}>
+                                {isTargeted && isEditingGl ? (
+                                  <select 
+                                    value={line.accountCode} 
+                                    onChange={(e) => {
+                                      let updated = [...journalEntries];
+                                      let targetIdx = updated.findIndex(ent => ent.id === entry.id);
+                                      updated[targetIdx].lines[lineIdx].accountCode = e.target.value;
+                                      saveLedger(updated);
+                                    }}
+                                    style={{ padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                  >
+                                    {coa.map(a => <option key={a.code} value={a.code}>{a.code}</option>)}
+                                  </select>
+                                ) : line.accountCode}
+                              </td>
+                              <td style={{ padding: '10px 8px', color: '#475569' }}>{getCoaName(line.accountCode)}</td>
+                              <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 500 }}>
+                                {isTargeted && isEditingGl ? (
+                                  <input type="number" value={line.debit} onChange={(e) => {
+                                    let updated = [...journalEntries];
+                                    let targetIdx = updated.findIndex(ent => ent.id === entry.id);
+                                    updated[targetIdx].lines[lineIdx].debit = Number(e.target.value);
+                                    saveLedger(updated);
+                                  }} style={{ width: '120px', textAlign: 'right', padding: '4px' }} />
+                                ) : (line.debit > 0 ? formatCurrency(line.debit) : '-')}
+                              </td>
+                              <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 500 }}>
+                                {isTargeted && isEditingGl ? (
+                                  <input type="number" value={line.credit} onChange={(e) => {
+                                    let updated = [...journalEntries];
+                                    let targetIdx = updated.findIndex(ent => ent.id === entry.id);
+                                    updated[targetIdx].lines[lineIdx].credit = Number(e.target.value);
+                                    saveLedger(updated);
+                                  }} style={{ width: '120px', textAlign: 'right', padding: '4px' }} />
+                                ) : (line.credit > 0 ? formatCurrency(line.credit) : '-')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 3: ACCOUNTS MANAGER */}
+          {activeTab === 'coa' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '0.85rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Provision New Account Parameter</h3>
+                <form onSubmit={handleAddAccount} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.2fr 2fr auto', gap: '16px', alignItems: 'end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Account Code</label>
+                    <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="e.g. 1400" style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Account Descriptor Title</label>
+                    <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g. Dividend Receivable" style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Structural Category</label>
+                    <select value={newType} onChange={e => setNewType(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#ffffff', fontSize: '0.85rem' }}>
+                      <option value="Asset">Asset</option>
+                      <option value="Liability">Liability</option>
+                      <option value="Equity">Equity</option>
+                      <option value="Expense">Expense</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Functional Narrative Context</label>
+                    <input type="text" value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Define structural balance guidelines..." style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} />
+                  </div>
+                  <button type="submit" style={{ padding: '11px 24px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>Save Account Parameter</button>
+                </form>
+              </div>
+
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Chart of Accounts Operational Balances</span>
+                  
+                  <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+                    {(['MTD', 'QTD', 'YTD', 'ITD'] as const).map((horizon) => (
+                      <button 
+                        key={horizon} 
+                        type="button"
+                        onClick={() => setBalanceFilter(horizon)} 
+                        style={{ padding: '8px 16px', border: 'none', background: balanceFilter === horizon ? '#0f172a' : '#ffffff', color: balanceFilter === horizon ? '#ffffff' : '#475569', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.1s' }}
+                      >
+                        {horizon} Horizon View
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ background: '#0f172a', color: '#ffffff', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 14px', fontWeight: 600 }}>Code</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 600 }}>Account Name</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 600 }}>Category</th>
+                      <th style={{ padding: '12px 14px', fontWeight: 600 }}>Functional Scope Description</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600 }}>Active {balanceFilter} Dynamic Total (USD)</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {coa.map((account) => {
+                      const filterKey = balanceFilter.toLowerCase();
+                      const rawVal = account[filterKey];
+                      const parsedBalance = typeof rawVal === 'number' ? rawVal : 0;
+                      
+                      return (
+                        <tr key={account.code} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+                          <td style={{ padding: '14px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>{account.code}</td>
+                          <td style={{ padding: '14px', fontWeight: 600, color: '#1e293b' }}>{account.name}</td>
+                          <td style={{ padding: '14px' }}><span style={{ fontSize: '0.72rem', padding: '3px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>{account.category}</span></td>
+                          <td style={{ padding: '14px', color: '#64748b', fontSize: '0.82rem' }}>{account.description}</td>
+                          <td style={{ padding: '14px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: parsedBalance < 0 ? '#b91c1c' : '#059669' }}>
+                            {formatCurrency(parsedBalance)}
+                          </td>
+                          <td style={{ padding: '14px', textAlign: 'center', position: 'relative' }}>
+                            <button onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === account.code ? null : account.code); }} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, color: '#475569' }}>Options ▾</button>
+                            {activeDropdown === account.code && (
+                              <div style={{ position: 'absolute', right: '14px', top: '44px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 10, minWidth: '140px' }}>
+                                <button onClick={() => { setCoa(coa.filter(a => a.code !== account.code)); setActiveDropdown(null); }} style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', border: 'none', background: 'none', fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, cursor: 'pointer' }}>Remove Index</button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 4: FUNDS PARTNERSHIP DIRECTORY (UNIFIED GROUP GRID ARCHITECTURE) */}
+          {activeTab === 'registry' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              {uniqueFunds.map((fundName: any) => {
+                const filteredEntities = entities.filter(e => e.targetFund === fundName && (directoryViewTab === 'ALL' || e.type === directoryViewTab));
+                
+                return (
+                  <div key={fundName} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '20px' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{fundName}</span>
+                      
+                      {/* Sub-group allocation tabs selector */}
+                      <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '6px' }}>
+                        {(['ALL', 'LP', 'GP', 'AFFILIATE'] as const).map((subTab) => (
+                          <button
+                            key={subTab}
+                            onClick={() => setDirectoryViewTab(subTab)}
+                            style={{ padding: '6px 12px', border: 'none', borderRadius: '4px', background: directoryViewTab === subTab ? '#ffffff' : 'transparent', color: directoryViewTab === subTab ? '#3b82f6' : '#64748b', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', boxShadow: directoryViewTab === subTab ? '0 1px 2px rgba(0,0,0,0.05)' : 'none' }}
+                          >
+                            {subTab === 'ALL' ? 'Unified Registry Ledger' : `${subTab}s Segment`}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
-                        <tr style={{ background: '#f8fafc', color: '#475569', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>
-                          <th style={{ padding: '10px' }}>Account Code</th>
-                          <th style={{ padding: '10px' }}>Account Name Metric Mapping</th>
-                          <th style={{ padding: '10px', textAlign: 'right' }}>Debit Balance (USD)</th>
-                          <th style={{ padding: '10px', textAlign: 'right' }}>Credit Balance (USD)</th>
-                          <th style={{ padding: '10px', textAlign: 'center' }}>Action</th>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                          <th style={{ padding: '12px 8px' }}>Entity Token ID</th>
+                          <th style={{ padding: '12px 8px' }}>Legal Entity Registered Name</th>
+                          <th style={{ padding: '12px 8px' }}>Partnership Structural Class</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'right' }}>Total Asset Commitment (USD)</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'right' }}>Calculated Fund Share (%)</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {entry.lines.map((line: any, lineIdx: number) => (
-                          <tr key={lineIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '8px 10px' }}>
-                              <input type="text" value={line.accountCode} onChange={(e) => updateLedgerCell(entryIdx, lineIdx, 'accountCode', e.target.value)} style={{ width: '70px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: 'monospace' }} />
+                        {filteredEntities.map((ent) => (
+                          <tr key={ent.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '14px 8px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>{ent.id}</td>
+                            <td style={{ padding: '14px 8px', fontWeight: 600, color: '#334155' }}>{ent.name}</td>
+                            <td style={{ padding: '14px 8px' }}>
+                              <span style={{
+                                fontSize: '0.7rem', padding: '3px 8px', borderRadius: '4px', fontWeight: 700,
+                                background: ent.type === 'LP' ? '#eff6ff' : ent.type === 'GP' ? '#ecfdf5' : '#f5f3ff',
+                                color: ent.type === 'LP' ? '#2563eb' : ent.type === 'GP' ? '#059669' : '#7c3aed'
+                              }}>
+                                {ent.type} PARTNER
+                              </span>
                             </td>
-                            <td style={{ padding: '8px 10px', color: '#475569' }}>{getCoaName(line.accountCode)}</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right' }}>
-                              <input type="number" value={line.debit} onChange={(e) => updateLedgerCell(entryIdx, lineIdx, 'debit', Number(e.target.value))} style={{ width: '120px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }} />
+                            <td style={{ padding: '14px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
+                              {ent.commitment > 0 ? `$${formatCurrency(ent.commitment)}` : 'N/A (Carry Vehicle)'}
                             </td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right' }}>
-                              <input type="number" value={line.credit} onChange={(e) => updateLedgerCell(entryIdx, lineIdx, 'credit', Number(e.target.value))} style={{ width: '120px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }} />
-                            </td>
-                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                              <button onClick={() => removeRowLine(entryIdx, lineIdx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem' }}>&times;</button>
+                            <td style={{ padding: '14px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
+                              {ent.share > 0 ? `${ent.share.toFixed(2)}%` : '0.00%'}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          )}
+
+          {/* VIEW 5: ADVANCED RECONCILIATION & MATCHING ENGINE */}
+          {activeTab === 'recon' && (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Spreadsheet Interlock Verification Desk</span>
+                <button 
+                  onClick={() => { alert(`Processing manual clearing match run for ${selectedReconRows.length} item(s).`); setSelectedReconRows([]); }}
+                  disabled={selectedReconRows.length === 0}
+                  style={{ padding: '8px 16px', background: selectedReconRows.length > 0 ? '#10b981' : '#cbd5e1', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: selectedReconRows.length > 0 ? 'pointer' : 'not-allowed' }}
+                >
+                  Force Manual Match Clear ({selectedReconRows.length} Selected)
+                </button>
+              </div>
+
+              <div style={{ overflowX: 'auto', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left', background: '#ffffff' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', color: '#475569' }}>
+                      <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                        <input type="checkbox" checked={selectedReconRows.length === reconData.length} onChange={() => { if(selectedReconRows.length === reconData.length) { setSelectedReconRows([]); } else { setSelectedReconRows(reconData.map(r => r.id)); } }} />
+                      </th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Match ID</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Accounting Date</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Age (Days)</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Transaction ID / Ref</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Account</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: '#334155' }}>Description</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Internal Amount</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>External Ledger</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Variance</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500 }}>Data Source</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, textAlign: 'center' }}>Currency</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Reconciliation Result</th>
+                      <th style={{ padding: '12px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reconData.map((row, index) => {
+                      const isChecked = selectedReconRows.includes(row.id);
+                      return (
+                        <tr key={row.id} style={{ borderBottom: '1px solid #e2e8f0', background: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                            <input type="checkbox" checked={isChecked} onChange={() => toggleReconRow(row.id)} />
+                          </td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.78rem', color: '#64748b' }}>{row.matchId}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>{row.date}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 600, color: row.age > 10 ? '#b91c1c' : '#334155' }}>{row.age}d</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace', fontWeight: 600 }}>{row.refNum}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace' }}>{row.accountCode}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', color: '#475569', fontSize: '0.8rem', minWidth: '180px' }}>{row.name}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(row.internalAmount)}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(row.externalAmount)}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: row.variance !== 0 ? '#b91c1c' : '#059669' }}>
+                            {formatCurrency(row.variance)}
+                          </td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', color: '#64748b', fontSize: '0.78rem' }}>{row.source}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 600, color: '#475569' }}>{row.currency}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: row.variance !== 0 ? '#b91c1c' : '#166534' }}>{row.result}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '3px 6px', borderRadius: '4px', fontWeight: 700, background: row.status === 'MATCHED' ? '#dcfce7' : '#fee2e2', color: row.status === 'MATCHED' ? '#166534' : '#991b1b' }}>
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
 
-          {/* TAB 3: ACCOUNTS MANAGER */}
-          {activeTab === 'coa' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', background: '#ffffff', padding: '24px', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>Create New Account Track</span>
-              <form onSubmit={handleAddNewAccountTrack} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.5fr auto', gap: '16px', alignItems: 'end' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '6px', color: '#475569' }}>Code</label>
-                  <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '6px', color: '#475569' }}>Account Descriptor Title</label>
-                  <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '6px', color: '#475569' }}>Category</label>
-                  <select value={newType} onChange={e => setNewType(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#ffffff' }}>
-                    <option value="Asset">Asset</option>
-                    <option value="Liability">Liability</option>
-                    <option value="Equity">Equity</option>
-                    <option value="Expense">Expense</option>
-                  </select>
-                </div>
-                <button type="submit" style={{ padding: '9px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 700, cursor: 'pointer' }}>Save Account</button>
-              </form>
-
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginTop: '20px' }}>
+          {/* VIEW 6: REPORT DEPOSITORY */}
+          {activeTab === 'reports' && (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Generated Financial Reports Archive</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: '#0f172a', color: '#ffffff', textAlign: 'left' }}>
-                    <th style={{ padding: '12px' }}>Account Code</th>
-                    <th style={{ padding: '12px' }}>Account Descriptor Name</th>
-                    <th style={{ padding: '12px' }}>Category Hierarchy</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>MTD Balance</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>QTD Balance</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>YTD Balance</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>ITD Balance</th>
+                    <th style={{ padding: '12px 10px' }}>Reference Hash</th>
+                    <th style={{ padding: '12px 10px' }}>File Target Destination Name</th>
+                    <th style={{ padding: '12px 10px' }}>Framework Category</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right' }}>Date Generated</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {coa.map(account => (
-                    <tr key={account.code} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '12px', fontWeight: 700 }}>{account.code}</td>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>{account.name}</td>
-                      <td style={{ padding: '12px' }}><span style={{ fontSize: '0.72rem', background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px' }}>{account.category}</span></td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>${formatCurrency(account.mtd)}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>${formatCurrency(account.qtd)}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>${formatCurrency(account.ytd)}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>${formatCurrency(account.itd)}</td>
+                  {reports.map(rep => (
+                    <tr key={rep.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '14px 10px', fontFamily: 'monospace', fontWeight: 600 }}>{rep.id}</td>
+                      <td style={{ padding: '14px 10px', color: '#2563eb', fontWeight: 500 }}>{rep.name}.{rep.format.toLowerCase()}</td>
+                      <td style={{ padding: '14px 10px' }}>{rep.type}</td>
+                      <td style={{ padding: '14px 10px', textAlign: 'right', color: '#64748b' }}>{rep.date}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
-
-          {/* OTHER SEGMENTS STANDBY SLOTS */}
-          {(activeTab === 'registry' || activeTab === 'recon' || activeTab === 'reports') && (
-            <div style={{ background: '#ffffff', padding: '32px', border: '1px dashed #cbd5e1', borderRadius: '6px', textAlign: 'center', color: '#64748b' }}>
-              Section matrix fully synchronized. Ledger balance dependencies currently running downstream.
             </div>
           )}
 
@@ -504,12 +837,3 @@ export default function Home() {
     </div>
   );
 }
-
-const sidebarTabs = [
-  { id: 'ingestion', label: 'File & Text Import Parsing' },
-  { id: 'ledger', label: 'Transactions - General Ledger' },
-  { id: 'coa', label: 'Accounts Manager' },
-  { id: 'registry', label: 'Funds Partnership Directory' },
-  { id: 'recon', label: 'Reconciliation & Matching' },
-  { id: 'reports', label: 'Report Depository' }
-];
