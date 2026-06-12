@@ -13,14 +13,14 @@ const DEFAULT_COA = [
 ];
 
 const INITIAL_ENTITIES = [
-  { id: 'LP-01', name: 'Alpha Endowment Fund', type: 'LP', targetFund: 'AGIP Alternative Investments IV' },
-  { id: 'LP-02', name: 'Beacon Pension Plan', type: 'LP', targetFund: 'AGIP Alternative Investments IV' },
-  { id: 'LP-03', name: 'Kian Wealth Management', type: 'LP', targetFund: 'AGIP Alternative Investments IV' },
-  { id: 'GP-01', name: 'AGIP Capital Partners LLC', type: 'GP', targetFund: 'AGIP Alternative Investments IV' },
-  { id: 'AFF-01', name: 'AGIP Feeder Carry Vehicle', type: 'Affiliate', targetFund: 'AGIP Alternative Investments IV' },
-  { id: 'LP-04', name: 'Delta Sovereign Fund', type: 'LP', targetFund: 'AGIP Private Credit Fund H2' },
-  { id: 'GP-02', name: 'AGIP Credit Managers LLC', type: 'GP', targetFund: 'AGIP Private Credit Fund H2' },
-  { id: 'AFF-02', name: 'Credit Trade Execution Corp', type: 'Affiliate', targetFund: 'AGIP Private Credit Fund H2' }
+  { id: 'LP-01', name: 'Alpha Endowment Fund', type: 'LP', targetFund: 'AGIP Alternative Investments IV', commitment: 100000000, share: 40.0 },
+  { id: 'LP-02', name: 'Beacon Pension Plan', type: 'LP', targetFund: 'AGIP Alternative Investments IV', commitment: 87500000, share: 35.0 },
+  { id: 'LP-03', name: 'Kian Wealth Management', type: 'LP', targetFund: 'AGIP Alternative Investments IV', commitment: 50000000, share: 20.0 },
+  { id: 'GP-01', name: 'AGIP Capital Partners LLC', type: 'GP', targetFund: 'AGIP Alternative Investments IV', commitment: 12500000, share: 5.0 },
+  { id: 'AFF-01', name: 'AGIP Feeder Carry Vehicle', type: 'Affiliate', targetFund: 'AGIP Alternative Investments IV', commitment: 0, share: 0.0 },
+  { id: 'LP-04', name: 'Delta Sovereign Fund', type: 'LP', targetFund: 'AGIP Private Credit Fund H2', commitment: 150000000, share: 75.0 },
+  { id: 'GP-02', name: 'AGIP Credit Managers LLC', type: 'GP', targetFund: 'AGIP Private Credit Fund H2', commitment: 50000000, share: 25.0 },
+  { id: 'AFF-02', name: 'Credit Trade Execution Corp', type: 'Affiliate', targetFund: 'AGIP Private Credit Fund H2', commitment: 0, share: 0.0 }
 ];
 
 export default function Home() {
@@ -49,9 +49,20 @@ export default function Home() {
   const [newType, setNewType] = useState('Asset');
   const [newDesc, setNewDesc] = useState('');
 
-  // General Ledger Action Toolbars Controlled Selectors
+  // General Ledger Modal & Selection Controllers
   const [selectedGlId, setSelectedGlId] = useState<string | null>(null);
   const [isEditingGl, setIsEditingGl] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // New Manual Record State Form Buffer
+  const [modalType, setModalType] = useState('Manual Journal Provision Entry');
+  const [modalLines, setModalLines] = useState([
+    { accountCode: '1100', debit: 0, credit: 0 },
+    { accountCode: '5100', debit: 0, credit: 0 }
+  ]);
+
+  // Partnership Directory Specific States
+  const [directoryViewTab, setDirectoryViewTab] = useState<'ALL' | 'LP' | 'GP' | 'AFFILIATE'>('ALL');
 
   // Currency Decimal Formatting Function
   const formatCurrency = (value: number) => {
@@ -63,11 +74,11 @@ export default function Home() {
 
   // Sync Storage Engine
   useEffect(() => {
-    const savedCoa = localStorage.getItem('corp_coa_v7');
-    const savedLedger = localStorage.getItem('corp_ledger_v7');
-    const savedEntities = localStorage.getItem('corp_entities_v7');
-    const savedReports = localStorage.getItem('corp_reports_v7');
-    const savedRecon = localStorage.getItem('corp_recon_v7');
+    const savedCoa = localStorage.getItem('corp_coa_v8');
+    const savedLedger = localStorage.getItem('corp_ledger_v8');
+    const savedEntities = localStorage.getItem('corp_entities_v8');
+    const savedReports = localStorage.getItem('corp_reports_v8');
+    const savedRecon = localStorage.getItem('corp_recon_v8');
 
     setCoa(savedCoa ? JSON.parse(savedCoa) : DEFAULT_COA);
     setEntities(savedEntities ? JSON.parse(savedEntities) : INITIAL_ENTITIES);
@@ -107,16 +118,16 @@ export default function Home() {
     ]);
 
     setReconData(savedRecon ? JSON.parse(savedRecon) : [
-      { id: 'REC-001', accountCode: '1100', name: 'Cash clearing Account Wire Audit', internalAmount: 1250000.00, externalAmount: 1250000.00, variance: 0.00, status: 'MATCHED' },
-      { id: 'REC-002', accountCode: '1200', name: 'Portfolio Valuation Custody Lock', internalAmount: 5000000.00, externalAmount: 5150000.00, variance: -150000.00, status: 'UNRECONCILED' },
-      { id: 'REC-003', accountCode: '1300', name: 'Bank Loans Principal Drawdown', internalAmount: 2200000.00, externalAmount: 2200000.00, variance: 0.00, status: 'MATCHED' },
-      { id: 'REC-004', accountCode: '5100', name: 'Management Fee Accrual Rec', internalAmount: 3750000.00, externalAmount: 3700000.00, variance: 50000.00, status: 'UNRECONCILED' }
+      { id: 'REC-001', matchId: 'MCH-1001', date: '2026-06-10', age: 2, refNum: 'TXN-WI-9022', accountCode: '1100', name: 'Cash clearing Account Wire Audit', internalAmount: 1250000.00, externalAmount: 1250000.00, variance: 0.00, status: 'MATCHED', source: 'Bank Statement', currency: 'USD', result: 'Fully Reconciled' },
+      { id: 'REC-002', matchId: 'MCH-PENDING', date: '2026-06-01', age: 11, refNum: 'PE-FV-7721', accountCode: '1200', name: 'Portfolio Valuation Custody Lock', internalAmount: 5000000.00, externalAmount: 5150000.00, variance: -150000.00, status: 'UNRECONCILED', source: 'Subsystem Portal', currency: 'USD', result: 'Investigation Pending' },
+      { id: 'REC-003', matchId: 'MCH-1002', date: '2026-06-11', age: 1, refNum: 'BL-DD-4451', accountCode: '1300', name: 'Bank Loans Principal Drawdown', internalAmount: 2200000.00, externalAmount: 2200000.00, variance: 0.00, status: 'MATCHED', source: 'Bank Statement', currency: 'USD', result: 'Fully Reconciled' },
+      { id: 'REC-004', matchId: 'MCH-EXCEPTION', date: '2026-05-28', age: 15, refNum: 'MGF-ACR-02', accountCode: '5100', name: 'Management Fee Accrual Rec', internalAmount: 3750000.00, externalAmount: 3700000.00, variance: 50000.00, status: 'UNRECONCILED', source: 'Ledger Estimate', currency: 'USD', result: 'Variance Exception Found' }
     ]);
   }, []);
 
   const saveLedger = (updated: any[]) => {
     setJournalEntries(updated);
-    localStorage.setItem('corp_ledger_v7', JSON.stringify(updated));
+    localStorage.setItem('corp_ledger_v8', JSON.stringify(updated));
   };
 
   const getCoaName = (code: string) => {
@@ -128,12 +139,22 @@ export default function Home() {
     if (!file) return;
     setUploadedFileName(file.name);
 
-    const fileReader = new FileReader();
-    fileReader.onload = async (evt) => {
-      const resultText = evt.target?.result as string;
-      setInputText(resultText);
-    };
-    fileReader.readAsText(file);
+    // Simulated parsing engine context for expanded file types (PDF, Email formats)
+    setLoading(true);
+    setTimeout(() => {
+      if (file.name.endsWith('.pdf')) {
+        setInputText(`[EXTRACTED VIA PDF OCR ENGINE]\nDocument: ${file.name}\nParsed Allocation Run:\n1100 DEBIT 2500000.00\n5100 DEBIT 1250000.00\n3100 CREDIT 3750000.00`);
+      } else if (file.name.endsWith('.eml') || file.name.endsWith('.msg')) {
+        setInputText(`[EXTRACTED VIA EMAIL PIPELINE PARSER]\nSubject: Capital Call Execution Notice\nFrom: operations@citco-services.com\nBody Lines:\nAccount 1100 Allocation Wire Target: USD 2,500,000.00`);
+      } else {
+        const fileReader = new FileReader();
+        fileReader.onload = (evt) => {
+          setInputText(evt.target?.result as string);
+        };
+        fileReader.readAsText(file);
+      }
+      setLoading(false);
+    }, 600);
   };
 
   async function handleMultiEntryParse() {
@@ -179,21 +200,27 @@ export default function Home() {
     setUploadedFileName('No file selected');
   }
 
-  function executeAddBlankRowGl() {
+  // Pop-up Modal Form Submit Controller
+  function handleModalGlSubmit(e: React.FormEvent) {
+    e.preventDefault();
     const nextSeq = String(journalEntries.length + 1).padStart(4, '0');
+    
     const newGl = {
       id: `GL-${nextSeq}`,
       date: '2026-06-12',
-      type: 'Manual Journal Provision Entry',
-      status: 'UNVALIDATED',
+      type: modalType,
+      status: 'VALIDATED',
       origin: 'MANUAL',
-      lines: [
-        { accountCode: '1100', debit: 0.00, credit: 0.00 },
-        { accountCode: '5100', debit: 0.00, credit: 0.00 }
-      ]
+      lines: modalLines
     };
+
     saveLedger([...journalEntries, newGl]);
-    setSelectedGlId(`GL-${nextSeq}`);
+    setIsModalOpen(false);
+    // Reset buffer
+    setModalLines([
+      { accountCode: '1100', debit: 0, credit: 0 },
+      { accountCode: '5100', debit: 0, credit: 0 }
+    ]);
   }
 
   function handleAddAccount(e: React.FormEvent) {
@@ -210,7 +237,7 @@ export default function Home() {
 
     const updatedCoa = [...coa, added];
     setCoa(updatedCoa);
-    localStorage.setItem('corp_coa_v7', JSON.stringify(updatedCoa));
+    localStorage.setItem('corp_coa_v8', JSON.stringify(updatedCoa));
 
     setNewCode('');
     setNewTitle('');
@@ -303,24 +330,24 @@ export default function Home() {
               {/* Data Ingestion Workspace */}
               <div style={{ background: '#ffffff', padding: '24px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                  Structural Document & Log Extraction Workspace
+                  Structural Document, Notice PDF & Email Ingestion Workspace
                 </h3>
                 
                 <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Paste structural notice logs, execution sheets or multi-line pipeline ledger records..."
+                  placeholder="Paste structural ledger records, check details or notice text data streams manually..."
                   style={{ width: '100%', height: '340px', padding: '16px', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.6', resize: 'none', background: '#f8fafc', outline: 'none', color: '#334155' }}
                 />
                 
                 <div style={{ marginTop: '16px', padding: '16px', background: '#f1f5f9', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>Source Data Object Attachment</span>
-                    <span style={{ fontSize: '0.82rem', color: '#64748b', fontFamily: 'monospace' }}>{uploadedFileName}</span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase' }}>Supported Extensions: CSV, TXT, PDF, EML, MSG</span>
+                    <span style={{ fontSize: '0.82rem', color: '#3b82f6', fontFamily: 'monospace', fontWeight: 600 }}>{uploadedFileName}</span>
                   </div>
-                  <input type="file" ref={fileInputRef} onChange={handleNativeFileUpload} accept=".txt,.csv,.json,.log" style={{ display: 'none' }} />
+                  <input type="file" ref={fileInputRef} onChange={handleNativeFileUpload} accept=".txt,.csv,.json,.log,.pdf,.eml,.msg" style={{ display: 'none' }} />
                   <button onClick={() => fileInputRef.current?.click()} style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#1e293b', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                    Choose File...
+                    Upload Notice File
                   </button>
                 </div>
 
@@ -329,7 +356,7 @@ export default function Home() {
                   disabled={loading || !inputText.trim()} 
                   style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: inputText.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '0.9rem', opacity: inputText.trim() ? 1 : 0.6, transition: 'background 0.2s' }}
                 >
-                  {loading ? 'Running Multi-Entry Processing Matrix...' : 'Execute Structural Ledger Extraction'}
+                  {loading ? 'Executing Extraction Pipeline...' : 'Run Document Parsing Engine'}
                 </button>
               </div>
 
@@ -340,7 +367,7 @@ export default function Home() {
                 </h3>
                 {extractedBatch.length === 0 ? (
                   <div style={{ border: '1px dashed #cbd5e1', borderRadius: '8px', height: '485px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', backgroundColor: '#ffffff', fontSize: '0.88rem' }}>
-                    Verification channel idle. Initiate parsing pipeline to isolate ledger targets.
+                    Verification channel idle. Upload or paste notice assets to build automated journals.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -393,7 +420,7 @@ export default function Home() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Audit Trail Ledger Base</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={executeAddBlankRowGl} style={{ padding: '8px 14px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <button onClick={() => setIsModalOpen(true)} style={{ padding: '8px 14px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
                     + Insert Manual Record
                   </button>
                   <button 
@@ -412,6 +439,60 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {/* POP-UP MODAL ENGINE FOR MANUAL GL ENTRIES */}
+              {isModalOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                  <div style={{ background: '#ffffff', borderRadius: '8px', width: '650px', padding: '32px', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>Provision Manual Ledger Transaction</h3>
+                      <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+                    </div>
+                    
+                    <form onSubmit={handleModalGlSubmit}>
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Transaction Operational Description</label>
+                        <input type="text" value={modalType} onChange={e => setModalType(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }} required />
+                      </div>
+
+                      <div style={{ marginBottom: '24px' }}>
+                        <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '10px', textTransform: 'uppercase' }}>Double Entry Accounting Lines</span>
+                        {modalLines.map((line, lIdx) => (
+                          <div key={lIdx} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                            <select 
+                              value={line.accountCode} 
+                              onChange={(e) => {
+                                let updated = [...modalLines];
+                                updated[lIdx].accountCode = e.target.value;
+                                setModalLines(updated);
+                              }}
+                              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.82rem' }}
+                            >
+                              {coa.map(a => <option key={a.code} value={a.code}>{a.code} - {a.name}</option>)}
+                            </select>
+                            <input type="number" placeholder="Debit" value={line.debit || ''} onChange={(e) => {
+                              let updated = [...modalLines];
+                              updated[lIdx].debit = Number(e.target.value);
+                              setModalLines(updated);
+                            }} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textAlign: 'right' }} />
+                            <input type="number" placeholder="Credit" value={line.credit || ''} onChange={(e) => {
+                              let updated = [...modalLines];
+                              updated[lIdx].credit = Number(e.target.value);
+                              setModalLines(updated);
+                            }} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textAlign: 'right' }} />
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => setModalLines([...modalLines, { accountCode: '1100', debit: 0, credit: 0 }])} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>+ Append Distribution Line</button>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                        <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" style={{ padding: '10px 18px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>Commit Entry</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {journalEntries.map((entry) => {
@@ -587,66 +668,72 @@ export default function Home() {
             </div>
           )}
 
-          {/* VIEW 4: FUNDS PARTNERSHIP DIRECTORY */}
+          {/* VIEW 4: FUNDS PARTNERSHIP DIRECTORY (UNIFIED GROUP GRID ARCHITECTURE) */}
           {activeTab === 'registry' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              {uniqueFunds.map((fundName: any) => (
-                <div key={fundName} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ borderBottom: '2px solid #0f172a', paddingBottom: '10px', marginBottom: '20px' }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{fundName}</span>
+              {uniqueFunds.map((fundName: any) => {
+                const filteredEntities = entities.filter(e => e.targetFund === fundName && (directoryViewTab === 'ALL' || e.type === directoryViewTab));
+                
+                return (
+                  <div key={fundName} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '20px' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{fundName}</span>
+                      
+                      {/* Sub-group allocation tabs selector */}
+                      <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '6px' }}>
+                        {(['ALL', 'LP', 'GP', 'AFFILIATE'] as const).map((subTab) => (
+                          <button
+                            key={subTab}
+                            onClick={() => setDirectoryViewTab(subTab)}
+                            style={{ padding: '6px 12px', border: 'none', borderRadius: '4px', background: directoryViewTab === subTab ? '#ffffff' : 'transparent', color: directoryViewTab === subTab ? '#3b82f6' : '#64748b', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', boxShadow: directoryViewTab === subTab ? '0 1px 2px rgba(0,0,0,0.05)' : 'none' }}
+                          >
+                            {subTab === 'ALL' ? 'Unified Registry Ledger' : `${subTab}s Segment`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                          <th style={{ padding: '12px 8px' }}>Entity Token ID</th>
+                          <th style={{ padding: '12px 8px' }}>Legal Entity Registered Name</th>
+                          <th style={{ padding: '12px 8px' }}>Partnership Structural Class</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'right' }}>Total Asset Commitment (USD)</th>
+                          <th style={{ padding: '12px 8px', textAlign: 'right' }}>Calculated Fund Share (%)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredEntities.map((ent) => (
+                          <tr key={ent.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '14px 8px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>{ent.id}</td>
+                            <td style={{ padding: '14px 8px', fontWeight: 600, color: '#334155' }}>{ent.name}</td>
+                            <td style={{ padding: '14px 8px' }}>
+                              <span style={{
+                                fontSize: '0.7rem', padding: '3px 8px', borderRadius: '4px', fontWeight: 700,
+                                background: ent.type === 'LP' ? '#eff6ff' : ent.type === 'GP' ? '#ecfdf5' : '#f5f3ff',
+                                color: ent.type === 'LP' ? '#2563eb' : ent.type === 'GP' ? '#059669' : '#7c3aed'
+                              }}>
+                                {ent.type} PARTNER
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
+                              {ent.commitment > 0 ? `$${formatCurrency(ent.commitment)}` : 'N/A (Carry Vehicle)'}
+                            </td>
+                            <td style={{ padding: '14px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
+                              {ent.share > 0 ? `${ent.share.toFixed(2)}%` : '0.00%'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-                    
-                    {/* LIMITED PARTNERS COLUMN */}
-                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Limited Partners (LPs)</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {entities.filter(e => e.targetFund === fundName && e.type === 'LP').map(ent => (
-                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
-                            <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* GENERAL PARTNERS COLUMN */}
-                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.03em' }}>General Partners (GPs)</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {entities.filter(e => e.targetFund === fundName && e.type === 'GP').map(ent => (
-                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
-                            <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* AFFILIATES CLASS COLUMN */}
-                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: '0.78rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Affiliated Entities</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {entities.filter(e => e.targetFund === fundName && e.type === 'Affiliate').map(ent => (
-                          <div key={ent.id} style={{ background: '#ffffff', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{ent.name}</span>
-                            <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#64748b', marginTop: '4px' }}>Token: {ent.id}</span>
-                          </div>
-                        ))}
-                        {entities.filter(e => e.targetFund === fundName && e.type === 'Affiliate').length === 0 && (
-                          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>No affiliates configured</span>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          {/* VIEW 5: RECONCILIATION & MATCHING */}
+          {/* VIEW 5: ADVANCED RECONCILIATION & MATCHING ENGINE */}
           {activeTab === 'recon' && (
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -664,15 +751,22 @@ export default function Home() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left', background: '#ffffff' }}>
                   <thead>
                     <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', color: '#475569' }}>
-                      <th style={{ padding: '10px', width: '40px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                      <th style={{ padding: '12px 10px', width: '40px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
                         <input type="checkbox" checked={selectedReconRows.length === reconData.length} onChange={() => { if(selectedReconRows.length === reconData.length) { setSelectedReconRows([]); } else { setSelectedReconRows(reconData.map(r => r.id)); } }} />
                       </th>
-                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Account Code</th>
-                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: '#334155' }}>Sub-Ledger Operational Class</th>
-                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Internal Book Amount (USD)</th>
-                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>External Statement Ledger (USD)</th>
-                      <th style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Unreconciled Variance (USD)</th>
-                      <th style={{ padding: '10px', fontWeight: 600, textAlign: 'center' }}>Status Check</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Match ID</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Accounting Date</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Age (Days)</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Transaction ID / Ref</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Account</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: '#334155' }}>Description</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Internal Amount</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>External Ledger</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontWeight: 600 }}>Variance</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500 }}>Data Source</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, textAlign: 'center' }}>Currency</th>
+                      <th style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>Reconciliation Result</th>
+                      <th style={{ padding: '12px 10px', fontWeight: 600, textAlign: 'center' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -680,18 +774,25 @@ export default function Home() {
                       const isChecked = selectedReconRows.includes(row.id);
                       return (
                         <tr key={row.id} style={{ borderBottom: '1px solid #e2e8f0', background: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                          <td style={{ padding: '10px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
                             <input type="checkbox" checked={isChecked} onChange={() => toggleReconRow(row.id)} />
                           </td>
-                          <td style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace', fontWeight: 700 }}>{row.accountCode}</td>
-                          <td style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: '#334155' }}>{row.name}</td>
-                          <td style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(row.internalAmount)}</td>
-                          <td style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(row.externalAmount)}</td>
-                          <td style={{ padding: '10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: row.variance !== 0 ? '#b91c1c' : '#059669' }}>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '0.78rem', color: '#64748b' }}>{row.matchId}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>{row.date}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 600, color: row.age > 10 ? '#b91c1c' : '#334155' }}>{row.age}d</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace', fontWeight: 600 }}>{row.refNum}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontFamily: 'monospace' }}>{row.accountCode}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', color: '#475569', fontSize: '0.8rem', minWidth: '180px' }}>{row.name}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(row.internalAmount)}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(row.externalAmount)}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: row.variance !== 0 ? '#b91c1c' : '#059669' }}>
                             {formatCurrency(row.variance)}
                           </td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>
-                            <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, background: row.status === 'MATCHED' ? '#dcfce7' : '#fee2e2', color: row.status === 'MATCHED' ? '#166534' : '#991b1b' }}>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', color: '#64748b', fontSize: '0.78rem' }}>{row.source}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 600, color: '#475569' }}>{row.currency}</td>
+                          <td style={{ padding: '12px 10px', borderRight: '1px solid #cbd5e1', fontWeight: 500, color: row.variance !== 0 ? '#b91c1c' : '#166534' }}>{row.result}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '3px 6px', borderRadius: '4px', fontWeight: 700, background: row.status === 'MATCHED' ? '#dcfce7' : '#fee2e2', color: row.status === 'MATCHED' ? '#166534' : '#991b1b' }}>
                               {row.status}
                             </span>
                           </td>
