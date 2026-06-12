@@ -249,8 +249,7 @@ export default function Home() {
       {/* LEFT TERMINAL NAVIGATION BAR */}
       <div style={{ width: '280px', backgroundColor: '#0f172a', color: '#f8fafc', display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
         <div style={{ padding: '24px', borderBottom: '1px solid #1e293b' }}>
-          {/* INAYOS NA LINYA DETECTED DITO */}
-          <span style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '0.05em', color: '#ffffff' }}>Terminal Control</span>
+          <span style={{ fontSize: '1rem', fontWeight: 800, tracking: '0.05em', color: '#ffffff' }}>Terminal Control</span>
         </div>
         <div style={{ padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {sidebarTabs.map(tab => {
