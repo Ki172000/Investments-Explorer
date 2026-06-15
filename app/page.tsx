@@ -636,7 +636,7 @@ export default function Home() {
           {/* VIEW 4: FUNDS PARTNERSHIP DIRECTORY WITH DYNAMIC CRUD ACTIONS */}
           {activeTab === 'registry' && (
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignBars: 'center', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {(['ALL', 'LP', 'GP', 'AFFILIATE'] as const).map(tab => (
                     <button key={tab} onClick={() => setDirectoryViewTab(tab)} style={{ padding: '6px 12px', border: 'none', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', background: directoryViewTab === tab ? '#0f172a' : 'transparent', color: directoryViewTab === tab ? '#ffffff' : '#64748b' }}>
